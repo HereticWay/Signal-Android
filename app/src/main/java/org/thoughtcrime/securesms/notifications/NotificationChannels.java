@@ -52,6 +52,7 @@ public class NotificationChannels {
   private static final String TAG = Log.tag(NotificationChannels.class);
 
   private static final long[] EMPTY_VIBRATION_PATTERN = new long[] { 0 };
+  private static final long[] SHORT_VIBRATION_PATTERN = new long[] { 0, 200 };
 
   private static class Version {
     static final int MESSAGES_CATEGORY   = 2;
@@ -401,8 +402,8 @@ public class NotificationChannels {
   }
 
   /**
-   * Some devices don't seem to respect the vibration flag on a notification channel. To disable, we
-   * instead set the pattern to be empty.
+   * Some devices don't seem to respect the vibration flag on a notification channel. However we
+   * set a pattern anyway because it works for many.
    *
    * Note: Calling {@link NotificationChannel#setVibrationPattern(long[])} with null will clear the empty
    * vibration pattern (if any) but also set the enable vibration flag to false, hence the two steps to enable.
@@ -411,7 +412,7 @@ public class NotificationChannels {
   @TargetApi(26)
   private static void setVibrationEnabled(@NonNull NotificationChannel channel, boolean enabled) {
     if (enabled) {
-      channel.setVibrationPattern(null);
+      channel.setVibrationPattern(SHORT_VIBRATION_PATTERN);
       channel.enableVibration(true);
     } else {
       channel.setVibrationPattern(EMPTY_VIBRATION_PATTERN);
