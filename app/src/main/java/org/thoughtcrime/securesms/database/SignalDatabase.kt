@@ -70,6 +70,7 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
   val avatarPickerDatabase: AvatarPickerDatabase = AvatarPickerDatabase(context, this)
   val groupCallRingDatabase: GroupCallRingDatabase = GroupCallRingDatabase(context, this)
   val reactionDatabase: ReactionDatabase = ReactionDatabase(context, this)
+  val notificationProfileDatabase: NotificationProfileDatabase = NotificationProfileDatabase(context, this)
 
   override fun onOpen(db: net.zetetic.database.sqlcipher.SQLiteDatabase) {
     db.enableWriteAheadLogging()
@@ -105,6 +106,8 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
     executeStatements(db, SearchDatabase.CREATE_TABLE)
     executeStatements(db, RemappedRecordsDatabase.CREATE_TABLE)
     executeStatements(db, MessageSendLogDatabase.CREATE_TABLE)
+    executeStatements(db, NotificationProfileDatabase.CREATE_TABLE)
+
     executeStatements(db, RecipientDatabase.CREATE_INDEXS)
     executeStatements(db, SmsDatabase.CREATE_INDEXS)
     executeStatements(db, MmsDatabase.CREATE_INDEXS)
@@ -119,8 +122,11 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
     executeStatements(db, PaymentDatabase.CREATE_INDEXES)
     executeStatements(db, MessageSendLogDatabase.CREATE_INDEXES)
     executeStatements(db, GroupCallRingDatabase.CREATE_INDEXES)
+    executeStatements(db, NotificationProfileDatabase.CREATE_INDEXES)
+
     executeStatements(db, MessageSendLogDatabase.CREATE_TRIGGERS)
     executeStatements(db, ReactionDatabase.CREATE_TRIGGERS)
+
     if (context.getDatabasePath(ClassicOpenHelper.NAME).exists()) {
       val legacyHelper = ClassicOpenHelper(context)
       val legacyDb = legacyHelper.writableDatabase
@@ -215,6 +221,11 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
       get() = instance!!.rawWritableDatabase.inTransaction()
 
     @JvmStatic
+    fun runPostSuccessfulTransaction(dedupeKey: String, task: Runnable) {
+      instance!!.signalReadableDatabase.runPostSuccessfulTransaction(dedupeKey, task)
+    }
+
+    @JvmStatic
     fun databaseFileExists(context: Context): Boolean {
       return context.getDatabasePath(DATABASE_NAME).exists()
     }
@@ -232,6 +243,7 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
         instance!!.sms.deleteAbandonedMessages()
         instance!!.mms.deleteAbandonedMessages()
         instance!!.mms.trimEntriesForExpiredMessages()
+        instance!!.reactionDatabase.deleteAbandonedReactions()
         instance!!.rawWritableDatabase.execSQL("DROP TABLE IF EXISTS key_value")
         instance!!.rawWritableDatabase.execSQL("DROP TABLE IF EXISTS megaphone")
         instance!!.rawWritableDatabase.execSQL("DROP TABLE IF EXISTS job_spec")
@@ -280,6 +292,17 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
           instance!!.rawWritableDatabase,
           listener
         )
+      }
+    }
+
+    @JvmStatic
+    fun runInTransaction(operation: Runnable) {
+      instance!!.signalWritableDatabase.beginTransaction()
+      try {
+        operation.run()
+        instance!!.signalWritableDatabase.setTransactionSuccessful()
+      } finally {
+        instance!!.signalWritableDatabase.endTransaction()
       }
     }
 
@@ -438,5 +461,10 @@ open class SignalDatabase(private val context: Application, databaseSecret: Data
     @get:JvmName("unknownStorageIds")
     val unknownStorageIds: UnknownStorageIdDatabase
       get() = instance!!.storageIdDatabase
+
+    @get:JvmStatic
+    @get:JvmName("notificationProfiles")
+    val notificationProfiles: NotificationProfileDatabase
+      get() = instance!!.notificationProfileDatabase
   }
 }

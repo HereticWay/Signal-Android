@@ -24,6 +24,9 @@ import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.events.CallParticipant;
 import org.thoughtcrime.securesms.events.WebRtcViewModel;
 import org.thoughtcrime.securesms.groups.GroupId;
+import org.thoughtcrime.securesms.keyvalue.SignalStore;
+import org.thoughtcrime.securesms.notifications.profiles.NotificationProfile;
+import org.thoughtcrime.securesms.notifications.profiles.NotificationProfiles;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
 import org.thoughtcrime.securesms.recipients.RecipientUtil;
@@ -187,6 +190,14 @@ public abstract class WebRtcActionProcessor {
       return currentState;
     }
 
+    NotificationProfile activeProfile = NotificationProfiles.getActiveProfile(SignalDatabase.notificationProfiles().getProfiles());
+    if (activeProfile != null && !(activeProfile.isRecipientAllowed(callMetadata.getRemotePeer().getId()) || activeProfile.getAllowAllCalls())) {
+      Log.w(tag, "Caller is excluded by notification profile.");
+      currentState = currentState.getActionProcessor().handleSendHangup(currentState, callMetadata, WebRtcData.HangupMetadata.fromType(HangupMessage.Type.NORMAL), true);
+      webRtcInteractor.insertMissedCall(callMetadata.getRemotePeer(), receivedOfferMetadata.getServerReceivedTimestamp(), offerMetadata.getOfferType() == OfferMessage.Type.VIDEO_CALL);
+      return currentState;
+    }
+
     Log.i(tag, "add remotePeer callId: " + callMetadata.getRemotePeer().getCallId() + " key: " + callMetadata.getRemotePeer().hashCode());
 
     callMetadata.getRemotePeer().setCallStartTimestamp(receivedOfferMetadata.getServerReceivedTimestamp());
@@ -212,9 +223,8 @@ public abstract class WebRtcActionProcessor {
                                                       offerMetadata.getOpaque(),
                                                       messageAgeSec,
                                                       WebRtcUtil.getCallMediaTypeFromOfferType(offerMetadata.getOfferType()),
-                                                      1,
-                                                      receivedOfferMetadata.isMultiRing(),
-                                                      true,
+                                                      SignalStore.account().getDeviceId(),
+                                                      SignalStore.account().isPrimaryDevice(),
                                                       remoteIdentityKey,
                                                       localIdentityKey);
     } catch (CallException | InvalidKeyException e) {
@@ -676,7 +686,7 @@ public abstract class WebRtcActionProcessor {
     try {
       webRtcInteractor.getCallManager().receivedCallMessage(opaqueMessageMetadata.getUuid(),
                                                             opaqueMessageMetadata.getRemoteDeviceId(),
-                                                            1,
+                                                            SignalStore.account().getDeviceId(),
                                                             opaqueMessageMetadata.getOpaque(),
                                                             opaqueMessageMetadata.getMessageAgeSeconds());
     } catch (CallException e) {

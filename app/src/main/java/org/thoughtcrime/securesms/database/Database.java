@@ -51,10 +51,6 @@ public abstract class Database {
     ApplicationDependencies.getDatabaseObserver().notifyVerboseConversationListeners(threadIds);
   }
 
-  protected void notifyVerboseConversationListeners(long threadId) {
-    ApplicationDependencies.getDatabaseObserver().notifyVerboseConversationListeners(threadId);
-  }
-
   protected void notifyConversationListListeners() {
     ApplicationDependencies.getDatabaseObserver().notifyConversationListListeners();
   }
@@ -73,5 +69,13 @@ public abstract class Database {
 
   public void reset(SignalDatabase databaseHelper) {
     this.databaseHelper = databaseHelper;
+  }
+
+  protected SQLiteDatabase getReadableDatabase() {
+    return databaseHelper.getSignalReadableDatabase();
+  }
+
+  protected SQLiteDatabase getWritableDatabase() {
+    return databaseHelper.getSignalWritableDatabase();
   }
 }

@@ -71,6 +71,11 @@ public class StorageForcePushJob extends BaseJob {
 
   @Override
   protected void onRun() throws IOException, RetryLaterException {
+    if (SignalStore.account().isLinkedDevice()) {
+      Log.i(TAG, "Only the primary device can force push");
+      return;
+    }
+
     StorageKey                  storageServiceKey = SignalStore.storageService().getOrCreateStorageKey();
     SignalServiceAccountManager accountManager    = ApplicationDependencies.getSignalServiceAccountManager();
     RecipientDatabase           recipientDatabase = SignalDatabase.recipients();
@@ -82,7 +87,7 @@ public class StorageForcePushJob extends BaseJob {
     long                        newVersion           = currentVersion + 1;
     Map<RecipientId, StorageId> newContactStorageIds = generateContactStorageIds(oldContactStorageIds);
     List<SignalStorageRecord>   inserts              = Stream.of(oldContactStorageIds.keySet())
-                                                             .map(recipientDatabase::getRecipientSettingsForSync)
+                                                             .map(recipientDatabase::getRecordForSync)
                                                              .withoutNulls()
                                                              .map(s -> StorageSyncModels.localToRemoteRecord(s, Objects.requireNonNull(newContactStorageIds.get(s.getId())).getRaw()))
                                                              .toList();

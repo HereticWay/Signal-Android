@@ -95,7 +95,7 @@ public class FullBackupImporter extends FullBackupBase {
       BackupFrame frame;
 
       while (!(frame = inputStream.readFrame()).getEnd()) {
-        if (count % 100 == 0) EventBus.getDefault().post(new BackupEvent(BackupEvent.Type.PROGRESS, count));
+        if (count % 100 == 0) EventBus.getDefault().post(new BackupEvent(BackupEvent.Type.PROGRESS, count, 0));
         count++;
 
         if      (frame.hasVersion())    processVersion(db, frame.getVersion());
@@ -115,7 +115,7 @@ public class FullBackupImporter extends FullBackupBase {
       keyValueDatabase.endTransaction();
     }
 
-    EventBus.getDefault().post(new BackupEvent(BackupEvent.Type.FINISHED, count));
+    EventBus.getDefault().post(new BackupEvent(BackupEvent.Type.FINISHED, count, 0));
   }
 
   private static @NonNull InputStream getInputStream(@NonNull Context context, @NonNull Uri uri) throws IOException{
@@ -207,7 +207,7 @@ public class FullBackupImporter extends FullBackupBase {
   private static void processAvatar(@NonNull Context context, @NonNull SQLiteDatabase db, @NonNull BackupProtos.Avatar avatar, @NonNull BackupRecordInputStream inputStream) throws IOException {
     if (avatar.hasRecipientId()) {
       RecipientId recipientId = RecipientId.from(avatar.getRecipientId());
-      inputStream.readAttachmentTo(AvatarHelper.getOutputStream(context, recipientId), avatar.getLength());
+      inputStream.readAttachmentTo(AvatarHelper.getOutputStream(context, recipientId, false), avatar.getLength());
     } else {
       if (avatar.hasName() && SqlUtil.tableExists(db, "recipient_preferences")) {
         Log.w(TAG, "Avatar is missing a recipientId. Clearing signal_profile_avatar (legacy) so it can be fetched later.");

@@ -4,7 +4,9 @@ import android.app.Application;
 
 import androidx.annotation.MainThread;
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.lifecycle.LiveData;
+import androidx.lifecycle.LiveDataReactiveStreams;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.Transformations;
@@ -22,6 +24,7 @@ import org.signal.paging.PagedData;
 import org.signal.paging.PagingConfig;
 import org.signal.paging.PagingController;
 import org.signal.paging.ProxyPagingController;
+import org.thoughtcrime.securesms.components.settings.app.notifications.profiles.NotificationProfilesRepository;
 import org.thoughtcrime.securesms.conversation.colors.ChatColors;
 import org.thoughtcrime.securesms.conversation.colors.ChatColorsPalette;
 import org.thoughtcrime.securesms.conversation.colors.NameColor;
@@ -33,6 +36,8 @@ import org.thoughtcrime.securesms.groups.LiveGroup;
 import org.thoughtcrime.securesms.groups.ui.GroupMemberEntry;
 import org.thoughtcrime.securesms.mediasend.Media;
 import org.thoughtcrime.securesms.mediasend.MediaRepository;
+import org.thoughtcrime.securesms.notifications.profiles.NotificationProfile;
+import org.thoughtcrime.securesms.notifications.profiles.NotificationProfiles;
 import org.thoughtcrime.securesms.ratelimit.RecaptchaRequiredEvent;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.recipients.RecipientId;
@@ -53,6 +58,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
+
+import io.reactivex.rxjava3.core.BackpressureStrategy;
+import io.reactivex.rxjava3.core.Observable;
 
 public class ConversationViewModel extends ViewModel {
 
@@ -81,6 +90,8 @@ public class ConversationViewModel extends ViewModel {
   private final LiveData<Integer>                   conversationTopMargin;
   private final Store<ThreadAnimationState>         threadAnimationStateStore;
   private final Observer<ThreadAnimationState>      threadAnimationStateStoreDriver;
+  private final NotificationProfilesRepository      notificationProfilesRepository;
+  private final MutableLiveData<String>             searchQuery;
 
   private final Map<GroupId, Set<Recipient>> sessionMemberCache = new HashMap<>();
 
@@ -88,23 +99,25 @@ public class ConversationViewModel extends ViewModel {
   private int                      jumpToPosition;
 
   private ConversationViewModel() {
-    this.context                   = ApplicationDependencies.getApplication();
-    this.mediaRepository           = new MediaRepository();
-    this.conversationRepository    = new ConversationRepository();
-    this.recentMedia               = new MutableLiveData<>();
-    this.threadId                  = new MutableLiveData<>();
-    this.showScrollButtons         = new MutableLiveData<>(false);
-    this.hasUnreadMentions         = new MutableLiveData<>(false);
-    this.recipientId               = new MutableLiveData<>();
-    this.events                    = new SingleLiveEvent<>();
-    this.pagingController          = new ProxyPagingController<>();
-    this.conversationObserver      = pagingController::onDataInvalidated;
-    this.messageUpdateObserver     = pagingController::onDataItemChanged;
-    this.messageInsertObserver     = messageId -> pagingController.onDataItemInserted(messageId, 0);
-    this.toolbarBottom             = new MutableLiveData<>();
-    this.inlinePlayerHeight        = new MutableLiveData<>();
-    this.conversationTopMargin     = Transformations.distinctUntilChanged(LiveDataUtil.combineLatest(toolbarBottom, inlinePlayerHeight, Integer::sum));
-    this.threadAnimationStateStore = new Store<>(new ThreadAnimationState(-1L, null, false));
+    this.context                        = ApplicationDependencies.getApplication();
+    this.mediaRepository                = new MediaRepository();
+    this.conversationRepository         = new ConversationRepository();
+    this.recentMedia                    = new MutableLiveData<>();
+    this.threadId                       = new MutableLiveData<>();
+    this.showScrollButtons              = new MutableLiveData<>(false);
+    this.hasUnreadMentions              = new MutableLiveData<>(false);
+    this.recipientId                    = new MutableLiveData<>();
+    this.events                         = new SingleLiveEvent<>();
+    this.pagingController               = new ProxyPagingController<>();
+    this.conversationObserver           = pagingController::onDataInvalidated;
+    this.messageUpdateObserver          = pagingController::onDataItemChanged;
+    this.messageInsertObserver          = messageId -> pagingController.onDataItemInserted(messageId, 0);
+    this.toolbarBottom                  = new MutableLiveData<>();
+    this.inlinePlayerHeight             = new MutableLiveData<>();
+    this.conversationTopMargin          = Transformations.distinctUntilChanged(LiveDataUtil.combineLatest(toolbarBottom, inlinePlayerHeight, Integer::sum));
+    this.threadAnimationStateStore      = new Store<>(new ThreadAnimationState(-1L, null, false));
+    this.notificationProfilesRepository = new NotificationProfilesRepository();
+    this.searchQuery                    = new MutableLiveData<>();
 
     LiveData<Recipient>          recipientLiveData  = LiveDataUtil.mapAsync(recipientId, Recipient::resolved);
     LiveData<ThreadAndRecipient> threadAndRecipient = LiveDataUtil.combineLatest(threadId, recipientLiveData, ThreadAndRecipient::new);
@@ -139,10 +152,10 @@ public class ConversationViewModel extends ViewModel {
       ApplicationDependencies.getDatabaseObserver().registerMessageInsertObserver(data.getThreadId(), messageInsertObserver);
 
       ConversationDataSource dataSource = new ConversationDataSource(context, data.getThreadId(), messageRequestData, data.showUniversalExpireTimerMessage());
-      PagingConfig           config     = new PagingConfig.Builder().setPageSize(25)
-                                                                    .setBufferPages(3)
-                                                                    .setStartIndex(Math.max(startPosition, 0))
-                                                                    .build();
+      PagingConfig config = new PagingConfig.Builder().setPageSize(25)
+                                                      .setBufferPages(3)
+                                                      .setStartIndex(Math.max(startPosition, 0))
+                                                      .build();
 
       Log.d(TAG, "Starting at position: " + startPosition + " || jumpToPosition: " + data.getJumpToPosition() + ", lastSeenPosition: " + data.getLastSeenPosition() + ", lastScrolledPosition: " + data.getLastScrolledPosition());
       return new Pair<>(data.getThreadId(), PagedData.create(dataSource, config));
@@ -157,13 +170,13 @@ public class ConversationViewModel extends ViewModel {
     canShowAsBubble      = LiveDataUtil.mapAsync(threadId, conversationRepository::canShowAsBubble);
     wallpaper            = LiveDataUtil.mapDistinct(Transformations.switchMap(recipientId,
                                                                               id -> Recipient.live(id).getLiveData()),
-                                                                              Recipient::getWallpaper);
+                                                    Recipient::getWallpaper);
 
     EventBus.getDefault().register(this);
 
     chatColors = LiveDataUtil.mapDistinct(Transformations.switchMap(recipientId,
                                                                     id -> Recipient.live(id).getLiveData()),
-                                                                    Recipient::getChatColors);
+                                          Recipient::getChatColors);
 
     threadAnimationStateStore.update(threadId, (id, state) -> {
       if (state.getThreadId() == id) {
@@ -233,6 +246,14 @@ public class ConversationViewModel extends ViewModel {
     this.threadId.postValue(-1L);
   }
 
+  void setSearchQuery(@Nullable String query) {
+    searchQuery.setValue(query);
+  }
+
+  @NonNull LiveData<String> getSearchQuery() {
+    return searchQuery;
+  }
+
   @NonNull LiveData<Integer> getConversationTopMargin() {
     return conversationTopMargin;
   }
@@ -263,6 +284,10 @@ public class ConversationViewModel extends ViewModel {
 
   void setHasUnreadMentions(boolean hasUnreadMentions) {
     this.hasUnreadMentions.setValue(hasUnreadMentions);
+  }
+
+  boolean getShowScrollButtons() {
+    return this.showScrollButtons.getValue();
   }
 
   void setShowScrollButtons(boolean showScrollButtons) {
@@ -300,7 +325,7 @@ public class ConversationViewModel extends ViewModel {
                                      .sortBy(Recipient::requireStringId)
                                      .toList();
 
-      List<NameColor> names = ChatColorsPalette.Names.getAll();
+      List<NameColor>             names  = ChatColorsPalette.Names.getAll();
       Map<RecipientId, NameColor> colors = new HashMap<>();
       for (int i = 0; i < sorted.size(); i++) {
         colors.put(sorted.get(i).getId(), names.get(i % names.size()));
@@ -322,6 +347,13 @@ public class ConversationViewModel extends ViewModel {
       sessionMemberCache.put(groupId, cachedMembers);
       return cachedMembers;
     });
+  }
+
+  @NonNull LiveData<Optional<NotificationProfile>> getActiveNotificationProfile() {
+    final Observable<Optional<NotificationProfile>> activeProfile = Observable.combineLatest(Observable.interval(0, 30, TimeUnit.SECONDS), notificationProfilesRepository.getProfiles(), (interval, profiles) -> profiles)
+                                                                              .map(profiles -> Optional.fromNullable(NotificationProfiles.getActiveProfile(profiles)));
+
+    return LiveDataReactiveStreams.fromPublisher(activeProfile.toFlowable(BackpressureStrategy.LATEST));
   }
 
   long getLastSeen() {

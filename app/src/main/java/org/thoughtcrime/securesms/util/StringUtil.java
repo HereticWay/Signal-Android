@@ -17,7 +17,10 @@ public final class StringUtil {
 
   private static final Set<Character> WHITESPACE = SetUtil.newHashSet('\u200E',  // left-to-right mark
                                                                       '\u200F',  // right-to-left mark
-                                                                      '\u2007'); // figure space
+                                                                      '\u2007',  // figure space
+                                                                      '\u200B',  // zero-width space
+                                                                      '\u2800'); // braille blank
+
 
   private static final class Bidi {
     /** Override text direction  */
@@ -166,6 +169,32 @@ public final class StringUtil {
   }
 
   /**
+   * @return True if the provided text contains a mix of LTR and RTL characters, otherwise false.
+   */
+  public static boolean hasMixedTextDirection(@Nullable CharSequence text) {
+    if (text == null) {
+      return false;
+    }
+
+    Boolean isLtr = null;
+
+    for (int i = 0, len = Character.codePointCount(text, 0, text.length()); i < len; i++) {
+      int  codePoint = Character.codePointAt(text, i);
+      byte direction = Character.getDirectionality(codePoint);
+
+      if (isLtr != null && isLtr && direction != Character.DIRECTIONALITY_LEFT_TO_RIGHT) {
+        return true;
+      } else if (isLtr != null && !isLtr && direction != Character.DIRECTIONALITY_RIGHT_TO_LEFT) {
+        return true;
+      } else {
+        isLtr = direction == Character.DIRECTIONALITY_LEFT_TO_RIGHT;
+      }
+    }
+
+    return false;
+  }
+
+  /**
    * Isolates bi-directional text from influencing surrounding text. You should use this whenever
    * you're injecting user-generated text into a larger string.
    *
@@ -231,6 +260,10 @@ public final class StringUtil {
     if (text == null) return null;
 
     return text.replaceAll("[\\u2068\\u2069\\u202c]", "");
+  }
+
+  public static @NonNull String stripBidiIndicator(@NonNull String text) {
+    return text.replace("\u200F", "");
   }
 
   /**

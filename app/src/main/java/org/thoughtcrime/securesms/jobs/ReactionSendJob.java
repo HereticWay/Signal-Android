@@ -12,9 +12,12 @@ import org.thoughtcrime.securesms.database.SignalDatabase;
 import org.thoughtcrime.securesms.database.model.MessageId;
 import org.thoughtcrime.securesms.database.model.MessageRecord;
 import org.thoughtcrime.securesms.database.model.ReactionRecord;
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.groups.GroupId;
 import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
+import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
+import org.thoughtcrime.securesms.keyvalue.SignalStore;
 import org.thoughtcrime.securesms.messages.GroupSendUtil;
 import org.thoughtcrime.securesms.net.NotPushRegisteredException;
 import org.thoughtcrime.securesms.recipients.Recipient;
@@ -88,6 +91,7 @@ public class ReactionSendJob extends BaseJob {
                                remove,
                                new Parameters.Builder()
                                              .setQueue(conversationRecipient.getId().toQueueKey())
+                                             .addConstraint(NetworkConstraint.KEY)
                                              .setLifespan(TimeUnit.DAYS.toMillis(1))
                                              .setMaxAttempts(Parameters.UNLIMITED)
                                              .build());
@@ -146,6 +150,10 @@ public class ReactionSendJob extends BaseJob {
 
     Recipient targetAuthor        = message.isOutgoing() ? Recipient.self() : message.getIndividualRecipient();
     long      targetSentTimestamp = message.getDateSent();
+
+    if (targetAuthor.getId().equals(SignalStore.releaseChannelValues().getReleaseChannelRecipientId())) {
+      return;
+    }
 
     if (!remove && !reactionDatabase.hasReaction(messageId, reaction)) {
       Log.w(TAG, "Went to add a reaction, but it's no longer present on the message!");
@@ -225,14 +233,20 @@ public class ReactionSendJob extends BaseJob {
       GroupUtil.setDataMessageGroupContext(context, dataMessageBuilder, conversationRecipient.requireGroupId().requirePush());
     }
 
-    SignalServiceDataMessage dataMessage = dataMessageBuilder.build();
-    List<SendMessageResult>  results     = GroupSendUtil.sendResendableDataMessage(context,
-                                                                                   conversationRecipient.getGroupId().transform(GroupId::requireV2).orNull(),
-                                                                                   destinations,
-                                                                                   false,
-                                                                                   ContentHint.RESENDABLE,
-                                                                                   messageId,
-                                                                                   dataMessage);
+    SignalServiceDataMessage dataMessage         = dataMessageBuilder.build();
+    List<Recipient>          nonSelfDestinations = destinations.stream().filter(r -> !r.isSelf()).collect(Collectors.toList());
+    boolean                  includesSelf        = nonSelfDestinations.size() != destinations.size();
+    List<SendMessageResult>  results             = GroupSendUtil.sendResendableDataMessage(context,
+                                                                                           conversationRecipient.getGroupId().transform(GroupId::requireV2).orNull(),
+                                                                                           nonSelfDestinations,
+                                                                                           false,
+                                                                                           ContentHint.RESENDABLE,
+                                                                                           messageId,
+                                                                                           dataMessage);
+
+    if (includesSelf) {
+      results.add(ApplicationDependencies.getSignalServiceMessageSender().sendSyncMessage(dataMessage));
+    }
 
     return GroupSendJobHelper.getCompletedSends(destinations, results);
   }

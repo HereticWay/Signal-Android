@@ -7,11 +7,13 @@ import android.text.SpannableString;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.cardview.widget.CardView;
 import androidx.core.content.ContextCompat;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
@@ -23,7 +25,10 @@ import com.google.common.collect.Sets;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.BindableConversationItem;
 import org.thoughtcrime.securesms.R;
-import org.thoughtcrime.securesms.VerifyIdentityActivity;
+import org.thoughtcrime.securesms.keyvalue.SignalStore;
+import org.thoughtcrime.securesms.util.views.AutoRounder;
+import org.thoughtcrime.securesms.util.views.Stub;
+import org.thoughtcrime.securesms.verify.VerifyIdentityActivity;
 import org.thoughtcrime.securesms.conversation.colors.Colorizer;
 import org.thoughtcrime.securesms.conversation.mutiselect.MultiselectPart;
 import org.thoughtcrime.securesms.conversation.ui.error.EnableCallNotificationSettingsDialog;
@@ -40,7 +45,6 @@ import org.thoughtcrime.securesms.util.DateUtils;
 import org.thoughtcrime.securesms.util.IdentityUtil;
 import org.thoughtcrime.securesms.util.Projection;
 import org.thoughtcrime.securesms.util.ProjectionList;
-import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.ThemeUtil;
 import org.thoughtcrime.securesms.util.Util;
 import org.thoughtcrime.securesms.util.ViewUtil;
@@ -53,7 +57,6 @@ import java.util.Collection;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public final class ConversationUpdateItem extends FrameLayout
@@ -67,6 +70,7 @@ public final class ConversationUpdateItem extends FrameLayout
 
   private TextView                  body;
   private MaterialButton            actionButton;
+  private Stub<CardView>            donateButtonStub;
   private View                      background;
   private ConversationMessage       conversationMessage;
   private Recipient                 conversationRecipient;
@@ -94,9 +98,10 @@ public final class ConversationUpdateItem extends FrameLayout
   @Override
   public void onFinishInflate() {
     super.onFinishInflate();
-    this.body         = findViewById(R.id.conversation_update_body);
-    this.actionButton = findViewById(R.id.conversation_update_action);
-    this.background   = findViewById(R.id.conversation_update_background);
+    this.body             = findViewById(R.id.conversation_update_body);
+    this.actionButton     = findViewById(R.id.conversation_update_action);
+    this.donateButtonStub = ViewUtil.findStubById(this, R.id.conversation_update_donate_action);
+    this.background       = findViewById(R.id.conversation_update_background);
 
     this.setOnClickListener(new InternalClickListener(null));
   }
@@ -219,6 +224,11 @@ public final class ConversationUpdateItem extends FrameLayout
 
   @Override
   public boolean canPlayContent() {
+    return false;
+  }
+
+  @Override
+  public boolean shouldProjectContent() {
     return false;
   }
 
@@ -421,6 +431,34 @@ public final class ConversationUpdateItem extends FrameLayout
     } else {
       actionButton.setVisibility(GONE);
       actionButton.setOnClickListener(null);
+    }
+
+    if (conversationMessage.getMessageRecord().isBoostRequest()) {
+      actionButton.setVisibility(GONE);
+
+      CardView donateButton = donateButtonStub.get();
+      TextView buttonText   = donateButton.findViewById(R.id.conversation_update_donate_action_button);
+      boolean  isSustainer  = SignalStore.donationsValues().isLikelyASustainer();
+
+      donateButton.setVisibility(VISIBLE);
+      donateButton.setOnClickListener(v -> {
+        if (batchSelected.isEmpty() && eventListener != null) {
+          eventListener.onDonateClicked();
+        }
+      });
+
+      if (isSustainer) {
+        buttonText.setText(R.string.ConversationUpdateItem_signal_boost);
+        buttonText.setCompoundDrawablesRelativeWithIntrinsicBounds(R.drawable.ic_boost_outline_16, 0, 0, 0);
+      } else {
+        buttonText.setText(R.string.ConversationUpdateItem_become_a_sustainer);
+        buttonText.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, 0, 0);
+      }
+
+      AutoRounder.autoSetCorners(donateButton, donateButton::setRadius);
+
+    } else if (donateButtonStub.resolved()) {
+      donateButtonStub.get().setVisibility(GONE);
     }
   }
 

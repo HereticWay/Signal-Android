@@ -49,6 +49,7 @@ import org.thoughtcrime.securesms.wallpaper.ChatWallpaper;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.libsignal.util.guava.Preconditions;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.PNI;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.UuidUtil;
 
@@ -78,6 +79,7 @@ public class Recipient {
   private final RecipientId            id;
   private final boolean                resolving;
   private final ACI                    aci;
+  private final PNI                    pni;
   private final String                 username;
   private final String                 e164;
   private final String                 email;
@@ -126,6 +128,7 @@ public class Recipient {
   private final Optional<Extras>       extras;
   private final boolean                hasGroupsInCommon;
   private final List<Badge>            badges;
+  private final boolean                isReleaseNotesRecipient;
 
   /**
    * Returns a {@link LiveRecipient}, which contains a {@link Recipient} that may or may not be
@@ -208,20 +211,20 @@ public class Recipient {
   }
 
   /**
-   * Returns a fully-populated {@link Recipient} based off of a UUID and phone number, creating one
+   * Returns a fully-populated {@link Recipient} based off of an ACI and phone number, creating one
    * in the database if necessary. We want both piece of information so we're able to associate them
    * both together, depending on which are available.
    *
-   * In particular, while we'll eventually get the UUID of a user created via a phone number
+   * In particular, while we'll eventually get the ACI of a user created via a phone number
    * (through a directory sync), the only way we can store the phone number is by retrieving it from
    * sent messages and whatnot. So we should store it when available.
    *
-   * @param highTrust This should only be set to true if the source of the E164-UUID pairing is one
+   * @param highTrust This should only be set to true if the source of the E164-ACI pairing is one
    *                  that can be trusted as accurate (like an envelope).
    */
   @WorkerThread
   public static @NonNull Recipient externalPush(@NonNull Context context, @Nullable ACI aci, @Nullable String e164, boolean highTrust) {
-    if (UuidUtil.UNKNOWN_UUID.equals(aci)) {
+    if (ACI.UNKNOWN.equals(aci)) {
       throw new AssertionError();
     }
 
@@ -230,11 +233,15 @@ public class Recipient {
 
     Recipient resolved = resolved(recipientId);
 
+    if (!resolved.getId().equals(recipientId)) {
+      Log.w(TAG, "Resolved " + recipientId + ", but got back a recipient with " + resolved.getId());
+    }
+
     if (highTrust && !resolved.isRegistered() && aci != null) {
       Log.w(TAG, "External high-trust push was locally marked unregistered. Marking as registered.");
       db.markRegistered(recipientId, aci);
     } else if (highTrust && !resolved.isRegistered()) {
-      Log.w(TAG, "External high-trust push was locally marked unregistered, but we don't have a UUID, so we can't do anything.", new Throwable());
+      Log.w(TAG, "External high-trust push was locally marked unregistered, but we don't have an ACI, so we can't do anything.", new Throwable());
     }
 
     return resolved;
@@ -329,9 +336,10 @@ public class Recipient {
 
   Recipient(@NonNull RecipientId id) {
     this.id                          = id;
-    this.resolving = true;
-    this.aci       = null;
-    this.username  = null;
+    this.resolving                   = true;
+    this.aci                         = null;
+    this.pni                         = null;
+    this.username                    = null;
     this.e164                        = null;
     this.email                       = null;
     this.groupId                     = null;
@@ -379,12 +387,14 @@ public class Recipient {
     this.extras                      = Optional.absent();
     this.hasGroupsInCommon           = false;
     this.badges                      = Collections.emptyList();
+    this.isReleaseNotesRecipient     = false;
   }
 
   public Recipient(@NonNull RecipientId id, @NonNull RecipientDetails details, boolean resolved) {
     this.id                          = id;
     this.resolving                   = !resolved;
     this.aci                         = details.aci;
+    this.pni                         = details.pni;
     this.username                    = details.username;
     this.e164                        = details.e164;
     this.email                       = details.email;
@@ -433,6 +443,7 @@ public class Recipient {
     this.extras                      = details.extras;
     this.hasGroupsInCommon           = details.hasGroupsInCommon;
     this.badges                      = details.badges;
+    this.isReleaseNotesRecipient     = details.isReleaseChannel;
   }
 
   public @NonNull RecipientId getId() {
@@ -605,6 +616,10 @@ public class Recipient {
 
   public @NonNull Optional<ACI> getAci() {
     return Optional.fromNullable(aci);
+  }
+
+  public @NonNull Optional<PNI> getPni() {
+    return Optional.fromNullable(pni);
   }
 
   public @NonNull Optional<String> getUsername() {
@@ -1096,6 +1111,10 @@ public class Recipient {
     return mentionSetting;
   }
 
+  public boolean isReleaseNotes() {
+    return isReleaseNotesRecipient;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -1182,7 +1201,6 @@ public class Recipient {
            profileSharing == other.profileSharing &&
            lastProfileFetch == other.lastProfileFetch &&
            forceSmsSelection == other.forceSmsSelection &&
-           Objects.equals(id, other.id) &&
            Objects.equals(aci, other.aci) &&
            Objects.equals(username, other.username) &&
            Objects.equals(e164, other.e164) &&

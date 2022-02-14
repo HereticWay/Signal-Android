@@ -126,7 +126,9 @@
 
     <color name="reactions_pill_text_color">@color/core_grey_60</color>
     <color name="reactions_pill_selected_text_color">@color/core_grey_75</color>
-    <color name="reactions_screen_shade_color">@color/transparent_black_40</color>
+    <color name="reactions_screen_dark_shade_color">@color/transparent_black_70</color>
+    <color name="reactions_screen_light_shade_color">@color/transparent_white_87</color>
+    <color name="reactions_status_bar_shade">#4d4d4d</color>
 
     <color name="recipient_contact_button_color">@color/core_grey_02</color>
 
@@ -168,4 +170,8 @@
     <color name="voice_note_player_speed_background_tint">@color/transparent_black_08</color>
 
     <color name="signal_accent_primary_transparent_15">#262c6bed</color>
+
+    <color name="notification_profile_moon_tint">#5151F6</color>
+
+    <color name="top_toast_background_color">@color/core_white</color>
 </resources>

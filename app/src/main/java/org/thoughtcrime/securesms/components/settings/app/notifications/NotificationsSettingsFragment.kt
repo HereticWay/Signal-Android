@@ -1,19 +1,24 @@
 package org.thoughtcrime.securesms.components.settings.app.notifications
 
 import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.graphics.ColorFilter
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.media.Ringtone
 import android.media.RingtoneManager
 import android.net.Uri
 import android.provider.Settings
 import android.text.TextUtils
 import android.view.View
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.preference.PreferenceManager
+import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.settings.DSLConfiguration
 import org.thoughtcrime.securesms.components.settings.DSLSettingsAdapter
@@ -26,12 +31,14 @@ import org.thoughtcrime.securesms.components.settings.RadioListPreferenceViewHol
 import org.thoughtcrime.securesms.components.settings.configure
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.notifications.NotificationChannels
-import org.thoughtcrime.securesms.util.MappingAdapter
 import org.thoughtcrime.securesms.util.RingtoneUtil
 import org.thoughtcrime.securesms.util.ViewUtil
+import org.thoughtcrime.securesms.util.adapter.mapping.LayoutFactory
+import org.thoughtcrime.securesms.util.navigation.safeNavigate
 
 private const val MESSAGE_SOUND_SELECT: Int = 1
 private const val CALL_RINGTONE_SELECT: Int = 2
+private val TAG = Log.tag(NotificationsSettingsFragment::class.java)
 
 class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__notifications) {
 
@@ -65,7 +72,7 @@ class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__
   override fun bindAdapter(adapter: DSLSettingsAdapter) {
     adapter.registerFactory(
       LedColorPreference::class.java,
-      MappingAdapter.LayoutFactory(::LedColorPreferenceViewHolder, R.layout.dsl_preference_item)
+      LayoutFactory(::LedColorPreferenceViewHolder, R.layout.dsl_preference_item)
     )
 
     val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(requireContext())
@@ -216,6 +223,18 @@ class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__
 
       dividerPref()
 
+      sectionHeaderPref(R.string.NotificationsSettingsFragment__notification_profiles)
+
+      clickPref(
+        title = DSLSettingsText.from(R.string.NotificationsSettingsFragment__profiles),
+        summary = DSLSettingsText.from(R.string.NotificationsSettingsFragment__create_a_profile_to_receive_notifications_only_from_people_and_groups_you_choose),
+        onClick = {
+          findNavController().safeNavigate(R.id.action_notificationsSettingsFragment_to_notificationProfilesFragment)
+        }
+      )
+
+      dividerPref()
+
       sectionHeaderPref(R.string.NotificationsSettingsFragment__notify_when)
 
       switchPref(
@@ -232,16 +251,20 @@ class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__
     return if (TextUtils.isEmpty(uri.toString())) {
       getString(R.string.preferences__silent)
     } else {
-      val tone = RingtoneUtil.getRingtone(requireContext(), uri)
+      val tone: Ringtone? = RingtoneUtil.getRingtone(requireContext(), uri)
       if (tone != null) {
-        tone.getTitle(requireContext()) ?: getString(R.string.NotificationsSettingsFragment__unknown_ringtone)
+        try {
+          tone.getTitle(requireContext()) ?: getString(R.string.NotificationsSettingsFragment__unknown_ringtone)
+        } catch (e: SecurityException) {
+          Log.w(TAG, "Unable to get title for ringtone", e)
+          return getString(R.string.NotificationsSettingsFragment__unknown_ringtone)
+        }
       } else {
         getString(R.string.preferences__default)
       }
     }
   }
 
-  @Suppress("DEPRECATION")
   private fun launchMessageSoundSelectionIntent() {
     val current = SignalStore.settings().messageNotificationSound
 
@@ -255,7 +278,7 @@ class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__
     )
     intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, current)
 
-    startActivityForResult(intent, MESSAGE_SOUND_SELECT)
+    openRingtonePicker(intent, MESSAGE_SOUND_SELECT)
   }
 
   @RequiresApi(26)
@@ -269,7 +292,6 @@ class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__
     startActivity(intent)
   }
 
-  @Suppress("DEPRECATION")
   private fun launchCallRingtoneSelectionIntent() {
     val current = SignalStore.settings().callRingtone
 
@@ -283,7 +305,16 @@ class NotificationsSettingsFragment : DSLSettingsFragment(R.string.preferences__
     )
     intent.putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, current)
 
-    startActivityForResult(intent, CALL_RINGTONE_SELECT)
+    openRingtonePicker(intent, CALL_RINGTONE_SELECT)
+  }
+
+  @Suppress("DEPRECATION")
+  private fun openRingtonePicker(intent: Intent, requestCode: Int) {
+    try {
+      startActivityForResult(intent, requestCode)
+    } catch (e: ActivityNotFoundException) {
+      Toast.makeText(requireContext(), R.string.NotificationSettingsFragment__failed_to_open_picker, Toast.LENGTH_LONG).show()
+    }
   }
 
   private class LedColorPreference(

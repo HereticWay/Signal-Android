@@ -35,13 +35,14 @@ import org.signal.core.util.logging.Log;
 import org.signal.zkgroup.InvalidInputException;
 import org.signal.zkgroup.groups.GroupMasterKey;
 import org.thoughtcrime.securesms.database.MessageDatabase.MarkedMessageInfo;
-import org.thoughtcrime.securesms.database.RecipientDatabase.RecipientSettings;
 import org.thoughtcrime.securesms.database.model.MediaMmsMessageRecord;
 import org.thoughtcrime.securesms.database.model.MessageRecord;
 import org.thoughtcrime.securesms.database.model.MmsMessageRecord;
+import org.thoughtcrime.securesms.database.model.RecipientRecord;
 import org.thoughtcrime.securesms.database.model.ThreadRecord;
 import org.thoughtcrime.securesms.groups.BadGroupIdException;
 import org.thoughtcrime.securesms.groups.GroupId;
+import org.thoughtcrime.securesms.keyvalue.SignalStore;
 import org.thoughtcrime.securesms.mms.Slide;
 import org.thoughtcrime.securesms.mms.SlideDeck;
 import org.thoughtcrime.securesms.mms.StickerSlide;
@@ -77,6 +78,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+
+import kotlin.Unit;
+import kotlin.collections.CollectionsKt;
 
 public class ThreadDatabase extends Database {
 
@@ -579,6 +583,10 @@ public class ThreadDatabase extends Database {
 
     query += " AND " + ARCHIVED + " = 0";
 
+    if (SignalStore.releaseChannelValues().getReleaseChannelRecipientId() != null) {
+      query += " AND " + RECIPIENT_ID + " != " + SignalStore.releaseChannelValues().getReleaseChannelRecipientId().toLong();
+    }
+
     return db.rawQuery(createQuery(query, 0, limit, true), null);
   }
 
@@ -874,14 +882,32 @@ public class ThreadDatabase extends Database {
   }
 
   public void unpinConversations(@NonNull Collection<Long> threadIds) {
-    SQLiteDatabase db            = databaseHelper.getSignalWritableDatabase();
-    ContentValues  contentValues = new ContentValues(1);
-    String         placeholders  = StringUtil.join(Stream.of(threadIds).map(unused -> "?").toList(), ",");
-    String         selection     = ID + " IN (" + placeholders + ")";
+    SQLiteDatabase db                     = databaseHelper.getSignalWritableDatabase();
+    ContentValues  contentValues          = new ContentValues(1);
+    String         placeholders           = StringUtil.join(Stream.of(threadIds).map(unused -> "?").toList(), ",");
+    String         selection              = ID + " IN (" + placeholders + ")";
+    List<Long>     remainingPinnedThreads = getPinnedThreadIds();
 
+    remainingPinnedThreads.removeAll(threadIds);
     contentValues.put(PINNED, 0);
 
-    db.update(TABLE_NAME, contentValues, selection, SqlUtil.buildArgs(Stream.of(threadIds).toArray()));
+    db.beginTransaction();
+    try {
+      db.update(TABLE_NAME, contentValues, selection, SqlUtil.buildArgs(Stream.of(threadIds).toArray()));
+
+      CollectionsKt.forEachIndexed(remainingPinnedThreads, (index, threadId) -> {
+        ContentValues values = new ContentValues(1);
+        values.put(PINNED, index + 1);
+        db.update(TABLE_NAME, values, ID_WHERE, SqlUtil.buildArgs(threadId));
+
+        return Unit.INSTANCE;
+      });
+
+      db.setTransactionSuccessful();
+    } finally {
+      db.endTransaction();
+    }
+
     notifyConversationListListeners();
 
     SignalDatabase.recipients().markNeedsSync(Recipient.self().getId());
@@ -1522,6 +1548,7 @@ public class ThreadDatabase extends Database {
     return MmsSmsColumns.Types.isProfileChange(type) ||
            MmsSmsColumns.Types.isGroupV1MigrationEvent(type) ||
            MmsSmsColumns.Types.isChangeNumber(type) ||
+           MmsSmsColumns.Types.isBoostRequest(type) ||
            MmsSmsColumns.Types.isGroupV2LeaveOnly(type);
   }
 
@@ -1561,8 +1588,8 @@ public class ThreadDatabase extends Database {
     }
 
     public ThreadRecord getCurrent() {
-      RecipientId       recipientId       = RecipientId.from(CursorUtil.requireLong(cursor, ThreadDatabase.RECIPIENT_ID));
-      RecipientSettings recipientSettings = RecipientDatabase.getRecipientSettings(context, cursor, ThreadDatabase.RECIPIENT_ID);
+      RecipientId     recipientId       = RecipientId.from(CursorUtil.requireLong(cursor, ThreadDatabase.RECIPIENT_ID));
+      RecipientRecord recipientSettings = SignalDatabase.recipients().getRecord(context, cursor, ThreadDatabase.RECIPIENT_ID);
 
       Recipient recipient;
 
@@ -1577,7 +1604,8 @@ public class ThreadDatabase extends Database {
                                                           false,
                                                           recipientSettings.getRegistered(),
                                                           recipientSettings,
-                                                          null);
+                                                          null,
+                                                          false);
           recipient = new Recipient(recipientId, details, false);
         } else {
           recipient = Recipient.live(recipientId).get();
@@ -1743,6 +1771,33 @@ public class ThreadDatabase extends Database {
 
     public @Nullable String getIndividualRecipientId() {
       return individualRecipientId;
+    }
+
+    @Override public boolean equals(Object o) {
+      if (this == o) return true;
+      if (o == null || getClass() != o.getClass()) return false;
+      Extra extra = (Extra) o;
+      return isRevealable == extra.isRevealable                         &&
+             isSticker == extra.isSticker                               &&
+             isAlbum == extra.isAlbum                                   &&
+             isRemoteDelete == extra.isRemoteDelete                     &&
+             isMessageRequestAccepted == extra.isMessageRequestAccepted &&
+             isGv2Invite == extra.isGv2Invite                           &&
+             Objects.equals(stickerEmoji, extra.stickerEmoji)           &&
+             Objects.equals(groupAddedBy, extra.groupAddedBy)           &&
+             Objects.equals(individualRecipientId, extra.individualRecipientId);
+    }
+
+    @Override public int hashCode() {
+      return Objects.hash(isRevealable,
+                          isSticker,
+                          stickerEmoji,
+                          isAlbum,
+                          isRemoteDelete,
+                          isMessageRequestAccepted,
+                          isGv2Invite,
+                          groupAddedBy,
+                          individualRecipientId);
     }
   }
 

@@ -90,6 +90,10 @@
   <string name="BlockUnblockDialog_group_members_will_be_able_to_add_you">Els membres del grup us podran afegir a aquest grup un altre cop.</string>
   <string name="BlockUnblockDialog_you_will_be_able_to_call_and_message_each_other">Us podreu enviar missatges i fer trucades, i compartireu el nom i la fotografia.</string>
   <string name="BlockUnblockDialog_blocked_people_wont_be_able_to_call_you_or_send_you_messages">Les persones blocades no us podran trucar ni enviar missatges.</string>
+  <!--Message shown on block dialog when blocking the Signal release notes recipient-->
+  <string name="BlockUnblockDialog_block_getting_signal_updates_and_news">Bloca rebre actualitzacions i notícies del Signal.</string>
+  <!--Message shown on unblock dialog when unblocking the Signal release notes recipient-->
+  <string name="BlockUnblockDialog_resume_getting_signal_updates_and_news">Continua rebent actualitzacions i notícies del Signal.</string>
   <string name="BlockUnblockDialog_unblock_s">Voleu desblocar %1$s?</string>
   <string name="BlockUnblockDialog_block">Bloca</string>
   <string name="BlockUnblockDialog_block_and_leave">Bloca i abandona</string>
@@ -297,6 +301,8 @@
   <string name="ConversationFragment_not_now">Ara no</string>
   <string name="ConversationFragment_your_safety_number_with_s_changed">El vostre número de seguretat amb %s ha canviat.</string>
   <string name="ConversationFragment_your_safety_number_with_s_changed_likey_because_they_reinstalled_signal">El número de segurtat amb %s ha canviat, probablement perquè s\'ha reinstal·lat el Signal o els dispositius han canviat. Toqueu Verifica per confirmar el número de seguretat nou. És opcional.</string>
+  <!--Message shown to indicate which notification profile is on/active-->
+  <string name="ConversationFragment__s_on">%1$s actiu</string>
   <plurals name="ConversationListFragment_delete_selected_conversations">
     <item quantity="one">Voleu suprimir la conversa seleccionada?</item>
     <item quantity="other">Voleu suprimir les converses seleccionades?</item>
@@ -358,6 +364,12 @@
     <item quantity="one">%d de seleccionat</item>
     <item quantity="other">%d de seleccionats</item>
   </plurals>
+  <!--Show in conversation list overflow menu to open selection bottom sheet-->
+  <string name="ConversationListFragment__notification_profile">Perfil de notificacions</string>
+  <!--Tooltip shown after you have created your first notification profile-->
+  <string name="ConversationListFragment__turn_your_notification_profile_on_or_off_here">Activeu o desactiveu el perfil de notificacions aquí.</string>
+  <!--Message shown in top toast to indicate the named profile is on-->
+  <string name="ConversationListFragment__s_on">%1$s actiu</string>
   <!--ConversationListItem-->
   <string name="ConversationListItem_key_exchange_message">Missatge d\'intercanvi de clau</string>
   <!--ConversationListItemAction-->
@@ -403,6 +415,8 @@
   <string name="BackupsPreferenceFragment__learn_more">Més informació</string>
   <string name="BackupsPreferenceFragment__in_progress">En curs…</string>
   <string name="BackupsPreferenceFragment__d_so_far">%1$d fins ara…</string>
+  <!--Show percentage of completion of backup-->
+  <string name="BackupsPreferenceFragment__s_so_far">%1$s%% fins ara…</string>
   <string name="BackupsPreferenceFragment_signal_requires_external_storage_permission_in_order_to_create_backups">El Signal necessita el permís de l\'emmagatzematge extern per tal de crear còpies de seguretat. Si us plau, continueu cap al menú de configuració de l\'aplicació, seleccioneu Permisos i activeu-hi l\'emmagatzematge.</string>
   <!--CustomDefaultPreference-->
   <string name="CustomDefaultPreference_using_custom">Ús de la personalització: %s</string>
@@ -438,9 +452,6 @@
   <string name="DeviceListItem_today">Avui</string>
   <!--DocumentView-->
   <string name="DocumentView_unnamed_file">Fitxer sense nom</string>
-  <!--GroupCallingMegaphone-->
-  <string name="GroupCallingMegaphone__introducing_group_calls">S\'introdueixen les trucades de grup</string>
-  <string name="GroupCallingMegaphone__open_a_new_group_to_start">Obriu un grup nou per iniciar una trucada de grup encriptada</string>
   <!--DozeReminder-->
   <string name="DozeReminder_optimize_for_missing_play_services">Optimitza per a la no presència dels Play Services</string>
   <string name="DozeReminder_this_device_does_not_support_play_services_tap_to_disable_system_battery">El dispositiu no és compatible amb Play Services. Toqueu per desactivar les optimitzacions de la bateria que impedeixen que el Signal rebi missatges quan estigui inactiu.</string>
@@ -558,10 +569,6 @@
   <string name="LeaveGroupDialog_choose_new_admin">Trieu un administrador nou</string>
   <string name="LeaveGroupDialog_before_you_leave_you_must_choose_at_least_one_new_admin_for_this_group">Abans d\'abandonar-lo, heu de triar almenys un administrador nou per a aquest grup.</string>
   <string name="LeaveGroupDialog_choose_admin">Trieu un administrador</string>
-  <!--LinkPreviewsMegaphone-->
-  <string name="LinkPreviewsMegaphone_disable">Desactiva</string>
-  <string name="LinkPreviewsMegaphone_preview_any_link">Previsualitza qualsevol enllaç</string>
-  <string name="LinkPreviewsMegaphone_you_can_now_retrieve_link_previews_directly_from_any_website">Ara podeu recuperar les previsualitzacions d’enllaços directament des de qualsevol lloc web per als missatges que envieu.</string>
   <!--LinkPreviewView-->
   <string name="LinkPreviewView_no_link_preview_available">No hi ha previsualització d\'enllaç disponible.</string>
   <string name="LinkPreviewView_this_group_link_is_not_active">Aquest enllaç de grup no està actiu.</string>
@@ -786,7 +793,7 @@
   <!--InviteActivity-->
   <string name="InviteActivity_share">Comparteix</string>
   <string name="InviteActivity_share_with_contacts">Comparteix amb els contactes</string>
-  <string name="InviteActivity_share_via">Comparteix via…</string>
+  <string name="InviteActivity_share_via">Comparteix mitjançant…</string>
   <string name="InviteActivity_cancel">Cancel·la</string>
   <string name="InviteActivity_sending">S\'envia…</string>
   <string name="InviteActivity_invitations_sent">Invitacions enviades!</string>
@@ -858,8 +865,6 @@
   <string name="MediaOverviewActivity_sent_by_s_to_s">Enviat per %1$s a %2$s</string>
   <string name="MediaOverviewActivity_sent_by_you_to_s">Ho heu enviat a %1$s</string>
   <!--Megaphones-->
-  <string name="Megaphones_introducing_reactions">S\'introdueixen les reaccions</string>
-  <string name="Megaphones_tap_and_hold_any_message_to_quicky_share_how_you_feel">Mantingueu un toc sobre qualsevol missatge per compartir com us sentiu.</string>
   <string name="Megaphones_remind_me_later">Recorda-m\'ho més tard.</string>
   <string name="Megaphones_verify_your_signal_pin">Verifiqueu el PIN del Signal</string>
   <string name="Megaphones_well_occasionally_ask_you_to_verify_your_pin">De tant en tant us demanarem de verificar el PIN perquè el recordeu.</string>
@@ -1083,7 +1088,11 @@
   <string name="MessageRecord_you_marked_your_safety_number_with_s_unverified">Heu tret la verificació del número de seguretat amb %s</string>
   <string name="MessageRecord_you_marked_your_safety_number_with_s_unverified_from_another_device">Heu tret la verificació del número de seguretat amb %s des d\'un altre dispositiu</string>
   <string name="MessageRecord_a_message_from_s_couldnt_be_delivered">No s\'ha pogut lliurar un missatge de %s.</string>
-  <string name="MessageRecord_s_changed_their_number_to_a_new_number">%1$s ha canviat el número.</string>
+  <string name="MessageRecord_s_changed_their_phone_number">%1$s ha canviat el número de telèfon.</string>
+  <!--Update item message shown in the release channel when someone is already a sustainer so we ask them if they want to boost.-->
+  <string name="MessageRecord_like_this_new_feature_say_thanks_with_a_boost">Us agrada aquesta funció nova? Doneu les gràcies amb una Empenta.</string>
+  <!--Update item message shown in the release channel when someone is not a sustainer so we ask them to consider becoming one-->
+  <string name="MessageRecord_signal_is_powered_by_people_like_you_become_a_sustainer_today">El Signal és sostingut per persones com vosaltres. Convertiu-vos-en en un sostenidor avui.</string>
   <!--Group Calling update messages-->
   <string name="MessageRecord_s_started_a_group_call_s">%1$s ha iniciat una trucada de grup · %2$s</string>
   <string name="MessageRecord_s_is_in_the_group_call_s">%1$s és a la trucada de grup · %2$s</string>
@@ -1112,6 +1121,7 @@
   <string name="MessageRequestBottomView_unblock">Desbloca</string>
   <string name="MessageRequestBottomView_do_you_want_to_let_s_message_you_they_wont_know_youve_seen_their_messages_until_you_accept">Voleu permetre que %1$s us envii missatges i compartir-hi el nom i la fotografia? No sabran que heu vist el missatge fins que no ho accepteu.</string>
   <string name="MessageRequestBottomView_do_you_want_to_let_s_message_you_wont_receive_any_messages_until_you_unblock_them">Voleu permetre que %1$s us envii missatges i compartir-hi el nom i la fotografia? No rebreu cap missatge fins que no el desbloqueu.</string>
+  <string name="MessageRequestBottomView_get_updates_and_news_from_s_you_wont_receive_any_updates_until_you_unblock_them">Voleu rebre actualitzacions i notícies de %1$s? No en rebreu cap actualització fins que no les desbloqueu.</string>
   <string name="MessageRequestBottomView_continue_your_conversation_with_this_group_and_share_your_name_and_photo">Voleu continuar la conversa amb aquest grup i compartir-hi el nom i la fotografia?</string>
   <string name="MessageRequestBottomView_upgrade_this_group_to_activate_new_features">Actualitzeu aquest grup i activeu-ne les funcions noves com ara les @mencions i els administradors. Els membres que no hi han compartit el nom o la fotografia es convidaran a afegir-s\'hi.</string>
   <string name="MessageRequestBottomView_this_legacy_group_can_no_longer_be_used">Aquest grup de llegat ja no es pot usar perquè és massa gros. La mida màxima d\'un grup és %1$d.</string>
@@ -1236,6 +1246,11 @@
   <string name="RedPhone_number_not_registered">Número no registrat!</string>
   <string name="RedPhone_the_number_you_dialed_does_not_support_secure_voice">El número que heu marcat no pot rebre trucades de veu segures!</string>
   <string name="RedPhone_got_it">Entesos</string>
+  <!--Valentine\'s Day Megaphone-->
+  <!--Title text for the Valentine\'s Day donation megaphone. The placeholder will always be a heart emoji. Needs to be a placeholder for Android reasons.-->
+  <string name="ValentinesDayMegaphone_happy_heart_day">Feliç dia 💜!</string>
+  <!--Body text for the Valentine\'s Day donation megaphone.-->
+  <string name="ValentinesDayMegaphone_show_your_affection">Mostreu afecte convertint-vos en un sostenidor del Signal.</string>
   <!--WebRtcCallActivity-->
   <string name="WebRtcCallActivity__tap_here_to_turn_on_your_video">Toqueu aquí per activar el vídeo</string>
   <string name="WebRtcCallActivity__to_call_s_signal_needs_access_to_your_camera">Per trucar a %1$s, el Signal necessita accés a la càmera.</string>
@@ -1266,18 +1281,18 @@
     <item quantity="one">%1$s, %2$s i %3$d més rebran una notificació</item>
     <item quantity="other">%1$s, %2$s i %3$d més rebran una notificació</item>
   </plurals>
-  <string name="WebRtcCallView__ringing_s">S\'està trucant a %1$s</string>
-  <string name="WebRtcCallView__ringing_s_and_s">S\'està trucant a %1$s i %2$s</string>
+  <string name="WebRtcCallView__ringing_s">Es truca a %1$s</string>
+  <string name="WebRtcCallView__ringing_s_and_s">Es truca a %1$s i %2$s</string>
   <plurals name="WebRtcCallView__ringing_s_s_and_d_others">
-    <item quantity="one">S\'està trucant a %1$s, %2$s i %3$d més</item>
-    <item quantity="other">S\'està trucant a %1$s, %2$s i %3$d més</item>
+    <item quantity="one">Es truca a %1$s, %2$s i %3$d més</item>
+    <item quantity="other">Es truca a %1$s, %2$s i %3$d més</item>
   </plurals>
   <string name="WebRtcCallView__s_is_calling_you">%1$s us està trucant</string>
-  <string name="WebRtcCallView__s_is_calling_you_and_s">%1$sus està trucat a vós i a %2$s</string>
-  <string name="WebRtcCallView__s_is_calling_you_s_and_s">%1$s us està trucant a vòs, %2$s i %3$s</string>
+  <string name="WebRtcCallView__s_is_calling_you_and_s">%1$sus truca a vós i a %2$s</string>
+  <string name="WebRtcCallView__s_is_calling_you_s_and_s">%1$s us truca a vós, %2$s i %3$s</string>
   <plurals name="WebRtcCallView__s_is_calling_you_s_s_and_d_others">
-    <item quantity="one">%1$s us està trucant a vós, a %2$s, a %3$s i a %4$d més</item>
-    <item quantity="other">%1$s us està trucant a vós, a %2$s, a %3$s i a %4$d més</item>
+    <item quantity="one">%1$s us truca a vós, a %2$s, a %3$s i a %4$d més</item>
+    <item quantity="other">%1$s us truca a vós, a %2$s, a %3$s i a %4$d més</item>
   </plurals>
   <string name="WebRtcCallView__no_one_else_is_here">Aquí no hi ha ningú més.</string>
   <string name="WebRtcCallView__s_is_in_this_call">%1$s és en aquesta trucada.</string>
@@ -1291,6 +1306,7 @@
   <string name="WebRtcCallView__flip">Canvia</string>
   <string name="WebRtcCallView__speaker">Altaveu</string>
   <string name="WebRtcCallView__camera">Càmera</string>
+  <string name="WebRtcCallView__unmute">No silenciats</string>
   <string name="WebRtcCallView__mute">Silenci</string>
   <string name="WebRtcCallView__ring">Truca</string>
   <string name="WebRtcCallView__end_call">Penja</string>
@@ -1336,8 +1352,8 @@ especificat (%s) no és vàlid.</string>
   <string name="RegistrationActivity_play_services_error">Error amb el Play Services</string>
   <string name="RegistrationActivity_google_play_services_is_updating_or_unavailable">El Google Play Services s\'està actualitzant o no està disponible. Torneu a provar-ho.</string>
   <string name="RegistrationActivity_terms_and_privacy">Termes i política de privadesa</string>
-  <string name="RegistrationActivity_signal_needs_access_to_your_contacts_and_media_in_order_to_connect_with_friends">El Signal necessita accés als contactes i als continguts multimèdia per tal de connectar amb amistats, intercanviar-hi missatges i fer trucades amb seguretat.</string>
-  <string name="RegistrationActivity_signal_needs_access_to_your_contacts_in_order_to_connect_with_friends">El Signal necessita accés als contactes per tal de connectar amb amistats, intercanviar-hi missatges i fer trucades amb seguretat.</string>
+  <string name="RegistrationActivity_signal_needs_access_to_your_contacts_and_media_in_order_to_connect_with_friends">El Signal necessita els contactes i els permisos multimèdia per ajudar-vos a connectar-vos amb amics i enviar missatges. Els vostres contactes es carreguen mitjançant el descobriment de contactes privats del Signal, la qual cosa significa que estan encriptats d\'extrem a extrem i mai no són visibles per al servei de Signal.</string>
+  <string name="RegistrationActivity_signal_needs_access_to_your_contacts_in_order_to_connect_with_friends">El Signal necessita el permís dels contactes per ajudar-vos a connectar-vos amb els amics. Els vostres contactes es carreguen mitjançant el descobriment de contactes privats del Signal, la qual cosa significa que estan encriptats d\'extrem a extrem i mai no són visibles per al servei de Signal.</string>
   <string name="RegistrationActivity_rate_limited_to_service">Heu fet massa intents per registrar aquest número. Si us plau, torneu-ho a provar més tard.</string>
   <string name="RegistrationActivity_unable_to_connect_to_service">No es pot connectar al servei. Si us plau, comproveu la connexió de xarxa i torneu-ho a provar.</string>
   <string name="RegistrationActivity_non_standard_number_format">Format de número no estàndard</string>
@@ -1617,6 +1633,7 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="UnauthorizedReminder_device_no_longer_registered">El dispositiu ja no està registrat.</string>
   <string name="UnauthorizedReminder_this_is_likely_because_you_registered_your_phone_number_with_Signal_on_a_different_device">Potser és així perquè vau registrar el número de telèfon al Signal des d\'un dispositiu diferent. Feu un toc per a tornar a registrar-lo.</string>
   <!--WebRtcCallActivity-->
+  <string name="WebRtcCallActivity_to_answer_the_call_give_signal_access_to_your_microphone">Per respondre la trucada, permeteu que el Signal accedeixi al micròfon.</string>
   <string name="WebRtcCallActivity_to_answer_the_call_from_s_give_signal_access_to_your_microphone">Per respondre una trucada de %s, permeteu que el Signal tingui accés al micròfon.</string>
   <string name="WebRtcCallActivity_signal_requires_microphone_and_camera_permissions_in_order_to_make_or_receive_calls">El Signal necessita el permís del micròfon i de la càmera per tal de fer o rebre trucades, però s\'han denegat permanentment. Si us plau, continueu cap al menú de configuració de l\'aplicació, seleccioneu Permisos i activeu-hi el micròfon i la càmera.</string>
   <string name="WebRtcCallActivity__answered_on_a_linked_device">S\'ha respost en un dispositiu enllaçat.</string>
@@ -1716,6 +1733,10 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="ConversationUpdateItem_no_contacts_in_this_group_review_requests_carefully">Cap contacte en aquest grup. Reviseu les sol·licituds amb atenció.</string>
   <string name="ConversationUpdateItem_view">Vista</string>
   <string name="ConversationUpdateItem_the_disappearing_message_time_will_be_set_to_s_when_you_message_them">El temps de desaparició del missatge s\'establirà a %1$s quan els n\'envieu un.</string>
+  <!--Update item button text to show to boost a feature-->
+  <string name="ConversationUpdateItem_signal_boost">Empenta del Signal</string>
+  <!--Update item button text to show to become a sustainer in the release notes channel-->
+  <string name="ConversationUpdateItem_become_a_sustainer">Sigueu-ne un sostenidor</string>
   <!--audio_view-->
   <string name="audio_view__play_pause_accessibility_description">Reprodueix… Pausa</string>
   <string name="audio_view__download_accessibility_description">Baixa</string>
@@ -1730,6 +1751,13 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="QuoteView_original_missing">No s\'ha trobat el missatge original.</string>
   <!--conversation_fragment-->
   <string name="conversation_fragment__scroll_to_the_bottom_content_description">Desplaça al final</string>
+  <!--BubbleOptOutTooltip-->
+  <!--Message to inform the user of what Android chat bubbles are-->
+  <string name="BubbleOptOutTooltip__description">Les bombolles són una funció d\'Android que podeu desactivar per a les converses del Signal.</string>
+  <!--Button to dismiss the tooltip for opting out of using Android bubbles-->
+  <string name="BubbleOptOutTooltip__not_now">Ara no</string>
+  <!--Button to move to the system settings to control the use of Android bubbles-->
+  <string name="BubbleOptOutTooltip__turn_off">Desactiva</string>
   <!--safety_number_change_dialog-->
   <string name="safety_number_change_dialog__safety_number_changes">Canvis en el número de seguretat</string>
   <string name="safety_number_change_dialog__accept">Ho accepto</string>
@@ -1762,7 +1790,7 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <!--device_link_fragment-->
   <string name="device_link_fragment__link_device">Enllaça un dispositiu</string>
   <!--device_list_fragment-->
-  <string name="device_list_fragment__no_devices_linked">No hi ha cap dispositiu enllaçat</string>
+  <string name="device_list_fragment__no_devices_linked">No hi ha cap dispositiu enllaçat.</string>
   <string name="device_list_fragment__link_new_device">Enllaça un dispositiu nou</string>
   <!--expiration-->
   <string name="expiration_off">Inactiu</string>
@@ -1809,7 +1837,7 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <!--giphy_activity-->
   <string name="giphy_activity_toolbar__search_gifs">Cerca de GIF</string>
   <!--giphy_fragment-->
-  <string name="giphy_fragment__nothing_found">No s\'ha trobat res</string>
+  <string name="giphy_fragment__nothing_found">No s\'ha trobat res.</string>
   <!--database_migration_activity-->
   <string name="database_migration_activity__would_you_like_to_import_your_existing_text_messages">Voleu importar els missatges de text existents a la base de dades encriptada del Signal?</string>
   <string name="database_migration_activity__the_default_system_database_will_not_be_modified">La base de dades predeterminada del sistema no es modificarà ni  s\'alterarà de cap manera.</string>
@@ -2310,18 +2338,33 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="conversation_callable_secure__menu_call">Trucada del Signal</string>
   <string name="conversation_callable_secure__menu_video">Trucada de vídeo del Signal</string>
   <!--conversation_context-->
-  <string name="conversation_context__menu_message_details">Detalls del missatge</string>
-  <string name="conversation_context__menu_copy_text">Copia el text</string>
-  <string name="conversation_context__menu_delete_message">Suprimeix el missatge</string>
-  <string name="conversation_context__menu_forward_message">Reenvia el missatge</string>
-  <string name="conversation_context__menu_resend_message">Torna a enviar el missatge</string>
-  <string name="conversation_context__menu_reply_to_message">Respon el missatge</string>
-  <!--conversation_context_reacction-->
-  <string name="conversation_context__reaction_multi_select">Selecció múltiple</string>
+  <!--Heading which shows how many messages are currently selected-->
+  <plurals name="conversation_context__s_selected">
+    <item quantity="one">%d de seleccionat</item>
+    <item quantity="other">%d de seleccionats</item>
+  </plurals>
   <!--conversation_context_image-->
-  <string name="conversation_context_image__save_attachment">Desa l\'adjunt</string>
+  <!--Button to save a message attachment (image, file etc.)-->
+  <string name="conversation_context_image__save_attachment">Desats</string>
   <!--conversation_expiring_off-->
   <string name="conversation_expiring_off__disappearing_messages">Missatges efímers</string>
+  <!--conversation_selection-->
+  <!--Button to view detailed information for a message-->
+  <string name="conversation_selection__menu_message_details">Informació</string>
+  <!--Button to copy a message\'s text to the clipboard-->
+  <string name="conversation_selection__menu_copy">Copia</string>
+  <!--Button to delete a message-->
+  <string name="conversation_selection__menu_delete">Suprimits</string>
+  <!--Button to forward a message to another person or group chat-->
+  <string name="conversation_selection__menu_forward">Reenvia</string>
+  <!--Button to reply to a message-->
+  <string name="conversation_selection__menu_reply">Respon</string>
+  <!--Button to save a message attachment (image, file etc.)-->
+  <string name="conversation_selection__menu_save">Desats</string>
+  <!--Button to retry sending a message-->
+  <string name="conversation_selection__menu_resend_message">Torna a enviar</string>
+  <!--Button to select a message and enter selection mode-->
+  <string name="conversation_selection__menu_multi_select">Selecció</string>
   <!--conversation_expiring_on-->
   <!--conversation_insecure-->
   <string name="conversation_insecure__invite">Convida</string>
@@ -2505,16 +2548,6 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="KbsMegaphone__create_a_pin">Crea un PIN</string>
   <string name="KbsMegaphone__pins_keep_information_thats_stored_with_signal_encrytped">Els PIN mantenen encriptada la informació desada amb el Signal.</string>
   <string name="KbsMegaphone__create_pin">Crea un PIN</string>
-  <!--Research Megaphone-->
-  <string name="ResearchMegaphone_tell_signal_what_you_think">Expliqueu a Signal què en penseu</string>
-  <string name="ResearchMegaphone_to_make_signal_the_best_messaging_app_on_the_planet">Per fer del Signal la millor aplicació de missatgeria del planeta, ens agradaria rebre\'n els vostres comentaris.</string>
-  <string name="ResearchMegaphone_learn_more">Més informació</string>
-  <string name="ResearchMegaphone_dismiss">Descarta</string>
-  <string name="ResearchMegaphoneDialog_signal_research">Recerca del Signal</string>
-  <string name="ResearchMegaphoneDialog_we_believe_in_privacy"><![CDATA[ <p><b>Creiem en la privadesa.</b></p><p> El Signal no us fa un seguiment ni recopila les vostres dades. Per millorar el Signal per a tothom, confiem en els comentaris dels usuaris i <b>ens encantaria rebre el vostre.</b></p><p> Estem fent una enquesta per entendre com useu el Signal. La nostra enquesta no recull cap dada que us identifiqui. Si esteu interessats a compartir comentaris addicionals, podreu proporcionar la informació de contacte.</p><p> Si teniu uns quants minuts i comentaris a oferir, ens encantaria rebre notícies vostres.</p>]]></string>
-  <string name="ResearchMegaphoneDialog_take_the_survey">Feu l\'enquesta</string>
-  <string name="ResearchMegaphoneDialog_no_thanks">No, gràcies.</string>
-  <string name="ResearchMegaphoneDialog_the_survey_is_hosted_by_alchemer_at_the_secure_domain">Alchemer en fa el seguiment al domini segur surveys.signalusers.org.</string>
   <!--transport_selection_list_item-->
   <string name="transport_selection_list_item__transport_icon">Icona de trànsit</string>
   <string name="ConversationListFragment_loading">Es carrega…</string>
@@ -2564,7 +2597,7 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="BackupDialog_verify">Verificació</string>
   <string name="BackupDialog_you_successfully_entered_your_backup_passphrase">Heu escrit correctament la contrasenya de còpia de seguretat.</string>
   <string name="BackupDialog_passphrase_was_not_correct">La contrasenya no és correcta.</string>
-  <string name="LocalBackupJob_creating_backup">Es crea una còpia de seguretat…</string>
+  <string name="LocalBackupJob_creating_signal_backup">Es crea una còpia de seguretat del Signal…</string>
   <string name="LocalBackupJobApi29_backup_failed">Ha fallat la còpia de seguretat.</string>
   <string name="LocalBackupJobApi29_your_backup_directory_has_been_deleted_or_moved">El directori de còpia de seguretat s\'ha suprimit o s\'ha canviat de lloc.</string>
   <string name="LocalBackupJobApi29_your_backup_file_is_too_large">El fitxer de còpia de seguretat és massa gros per desar-lo en aquest volum.</string>
@@ -2686,6 +2719,8 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="DeviceTransfer__transferring_data">Es transfereixen dades</string>
   <string name="DeviceTransfer__keep_both_devices_near_each_other">Mantingueu els dos dispositius a prop l’un de l’altre. No els apagueu i mantingueu el Signal obert. Les transferències estan encriptades d\'extrem a extrem.</string>
   <string name="DeviceTransfer__d_messages_so_far">%1$d missatges fins ara…</string>
+  <!--Filled in with total percentage of messages transferred-->
+  <string name="DeviceTransfer__s_of_messages_so_far">%1$s%% de missatges fins ara…</string>
   <string name="DeviceTransfer__cancel">Cancel·la</string>
   <string name="DeviceTransfer__try_again">Torna a provar-ho</string>
   <string name="DeviceTransfer__stop_transfer_question">Aturo la transferència?</string>
@@ -2735,6 +2770,8 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="RecipientBottomSheet_block">Bloca</string>
   <string name="RecipientBottomSheet_unblock">Desbloca</string>
   <string name="RecipientBottomSheet_add_to_contacts">Afegeix als contactes</string>
+  <!--Error message that displays when a user tries to tap to view system contact details but has no app that supports it-->
+  <string name="RecipientBottomSheet_unable_to_open_contacts">No trobo cap aplicació que pugui obrir contactes.</string>
   <string name="RecipientBottomSheet_add_to_a_group">Afegeix-lo a un grup</string>
   <string name="RecipientBottomSheet_add_to_another_group">Afegeix-lo a un altre grup</string>
   <string name="RecipientBottomSheet_view_safety_number">Mostra el número de seguretat</string>
@@ -2833,6 +2870,18 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="DeleteAccountFragment__failed_to_delete_account">Ha fallat suprimir el compte. Teniu connexió de xarxa?</string>
   <string name="DeleteAccountFragment__failed_to_delete_local_data">Ha fallat suprimir les dades locals. Les podeu suprimir manualment des de la configuració del sistema.</string>
   <string name="DeleteAccountFragment__launch_app_settings">Obre la configuració de l\'aplicació</string>
+  <!--Title of progress dialog shown when a user deletes their account and the process is leaving all groups-->
+  <string name="DeleteAccountFragment__leaving_groups">Es deixen els grups…</string>
+  <!--Title of progress dialog shown when a user deletes their account and the process has left all groups-->
+  <string name="DeleteAccountFragment__deleting_account">Se suprimeix el compte…</string>
+  <!--Message of progress dialog shown when a user deletes their account and the process is leaving groups-->
+  <string name="DeleteAccountFragment__depending_on_the_number_of_groups">Segons el nombre de grups en què us trobeu, això pot trigar uns quants minuts.</string>
+  <!--Message of progress dialog shown when a user deletes their account and the process has left all groups-->
+  <string name="DeleteAccountFragment__deleting_all_user_data_and_resetting">Se suprimeixen les dades de l\'usuari i es restableix l\'aplicació</string>
+  <!--Title of error dialog shown when a network error occurs during account deletion-->
+  <string name="DeleteAccountFragment__account_not_deleted">Compte no suprimit</string>
+  <!--Message of error dialog shown when a network error occurs during account deletion-->
+  <string name="DeleteAccountFragment__there_was_a_problem">S\'ha produït un problema en completar el procés de supressió. Comproveu la connexió de xarxa i torneu-ho a provar.</string>
   <!--DeleteAccountCountryPickerFragment-->
   <string name="DeleteAccountCountryPickerFragment__search_countries">Cerca països</string>
   <!--CreateGroupActivity-->
@@ -2994,7 +3043,10 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <!--ChangeNumberFragment-->
   <string name="ChangeNumberFragment__use_this_to_change_your_current_phone_number_to_a_new_phone_number">Useu-ho per canviar el número de telèfon actual per un número nou. No podeu desfer aquest canvi. \n\nAbans de continuar, assegureu-vos que el número nou pugui rebre SMS o trucades.</string>
   <string name="ChangeNumberFragment__continue">Continua</string>
-  <string name="ChangeNumber__your_phone_number_has_been_changed">S\'ha canviat el número de telèfon.</string>
+  <!--Message shown on dialog after your number has been changed successfully.-->
+  <string name="ChangeNumber__your_phone_number_has_changed_to_s">S\'ha canviat el número de telèfon a %1$s.</string>
+  <!--Confirmation button to dismiss number changed dialog-->
+  <string name="ChangeNumber__okay">D\'acord</string>
   <!--ChangeNumberEnterPhoneNumberFragment-->
   <string name="ChangeNumberEnterPhoneNumberFragment__change_number">Canvia el número</string>
   <string name="ChangeNumberEnterPhoneNumberFragment__your_old_number">El número antic</string>
@@ -3023,12 +3075,19 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="ChangeNumberPinDiffersFragment__update_pin">Actualitza el PIN</string>
   <string name="ChangeNumberPinDiffersFragment__keep_old_pin_question">Voleu conservar el PIN antic?</string>
   <!--ChangeNumberLockActivity-->
+  <!--Info message shown to user if something crashed the app during the change number attempt and we were unable to confirm the change so we force them into this screen to check before letting them use the app-->
   <string name="ChangeNumberLockActivity__it_looks_like_you_tried_to_change_your_number_but_we_were_unable_to_determine_if_it_was_successful_rechecking_now">Sembla que heu intentat canviar el número però no hem pogut determinar si s\'ha fet correctament.\n\nEs torna a comprovar ara…</string>
+  <!--Dialog title shown if we were able to confirm your change number status (meaning we now know what the server thinks our number is) after a crash during the regular flow-->
   <string name="ChangeNumberLockActivity__change_status_confirmed">Canvi d\'estat confirmat</string>
+  <!--Dialog message shown if we were able to confirm your change number status (meaning we now know what the server thinks our number is) after a crash during the regular flow-->
   <string name="ChangeNumberLockActivity__your_number_has_been_confirmed_as_s">El número s\'ha confirmat com a %1$s. Si aquest no és el vostre número nou, reinicieu el procés de canvi de número.</string>
+  <!--Dialog title shown if we were not able to confirm your phone number with the server and thus cannot let leave the change flow yet after a crash during the regular flow-->
   <string name="ChangeNumberLockActivity__change_status_unconfirmed">Canvi d\'estat no confirmat</string>
+  <!--Dialog message shown when we can\'t verify the phone number on the server, only shown if there was a network error communicating with the server after a crash during the regular flow-->
   <string name="ChangeNumberLockActivity__we_could_not_determine_the_status_of_your_change_number_request">No hem pogut determinar l\'estat de la vostra sol·licitud de canvi de número. \n\n(Error: %1$s)</string>
+  <!--Dialog button to retry confirming the number on the server-->
   <string name="ChangeNumberLockActivity__retry">Torneu a provar-ho</string>
+  <!--Dialog button shown to leave the app when in the unconfirmed change status after a crash in the regular flow-->
   <string name="ChangeNumberLockActivity__leave">Surt</string>
   <string name="ChangeNumberLockActivity__submit_debug_log">Envia un registre de depuració</string>
   <!--ChatsSettingsFragment-->
@@ -3041,6 +3100,17 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="NotificationsSettingsFragment__calls">Trucades</string>
   <string name="NotificationsSettingsFragment__notify_when">Notifica quan…</string>
   <string name="NotificationsSettingsFragment__contact_joins_signal">El contacte s\'afegeix al Signal</string>
+  <!--Notification preference header-->
+  <string name="NotificationsSettingsFragment__notification_profiles">Perfils de notificacions</string>
+  <!--Notification preference option header-->
+  <string name="NotificationsSettingsFragment__profiles">Perfils</string>
+  <!--Notification preference summary text-->
+  <string name="NotificationsSettingsFragment__create_a_profile_to_receive_notifications_only_from_people_and_groups_you_choose">Creeu un perfil per rebre notificacions només de les persones i els grups que trieu.</string>
+  <!--NotificationProfilesFragment-->
+  <!--Title for notification profiles screen that shows all existing profiles-->
+  <string name="NotificationProfilesFragment__notification_profiles">Perfils de notificacions</string>
+  <!--Button text to create a notification profile-->
+  <string name="NotificationProfilesFragment__create_profile">Crea un perfil</string>
   <!--PrivacySettingsFragment-->
   <string name="PrivacySettingsFragment__blocked">Blocat</string>
   <string name="PrivacySettingsFragment__d_contacts">%1$d contactes</string>
@@ -3366,9 +3436,15 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="ExpiredBadgeBottomSheetDialogFragment__become_a_sustainer">Sigueu-ne un sostenidor</string>
   <string name="ExpiredBadgeBottomSheetDialogFragment__add_a_boost">Afegiu-hi una empenta</string>
   <string name="ExpiredBadgeBottomSheetDialogFragment__not_now">Ara no</string>
-  <string name="ExpiredBadgeBottomSheetDialogFragment__your_sustainer">La vostra subscripció de sostenidor s\'ha cancel·lat automàticament perquè heu estat massa temps inactiu. La insígnia %1$s ja no és visible al perfil.</string>
+  <!--Copy displayed when badge expires after user inactivity-->
+  <string name="ExpiredBadgeBottomSheetDialogFragment__your_sustainer_subscription_was_automatically">La vostra subscripció de sostenidor s\'ha cancel·lat automàticament perquè heu estat massa temps inactiu. La insígnia %1$s ja no és visible al perfil.</string>
+  <!--Copy displayed when badge expires after payment failure-->
+  <string name="ExpiredBadgeBottomSheetDialogFragment__your_sustainer_subscription_was_canceled">La subscripció de sostenidor s\'ha cancel·lat perquè no hem pogut processar el pagament. La insígnia ja no és visible al perfil.</string>
   <string name="ExpiredBadgeBottomSheetDialogFragment__you_can">Podeu continuar usant el Signal, però per donar suport a l\'aplicació i reactivar la insígnia, renoveu-la ara.</string>
   <string name="ExpiredBadgeBottomSheetDialogFragment__renew_subscription">Renova la subscripció</string>
+  <string name="CantProcessSubscriptionPaymentBottomSheetDialogFragment__cant_process_subscription_payment">No es pot processar el pagament de la subscripció.</string>
+  <string name="CantProcessSubscriptionPaymentBottomSheetDialogFragment__were_having_trouble">Tenim problemes per cobrar el pagament de sostenidor del Signal. Assegureu-vos que el mètode de pagament estigui actualitzat. Si no és així, actualitzeu-lo a Google Pay. Signal intentarà processar el pagament de nou d\'aquí a uns dies.</string>
+  <string name="CantProcessSubscriptionPaymentBottomSheetDialogFragment__dont_show_this_again">No ho tornis a mostrar</string>
   <string name="Subscription__please_contact_support_for_more_information">Poseu-vos en contacte amb el servei d\'assistència per obtenir-ne més informació.</string>
   <string name="Subscription__contact_support">Contacteu amb l\'Assistència</string>
   <string name="Subscription__earn_a_s_badge">Guanyeu una insígnia %1$s</string>
@@ -3390,5 +3466,175 @@ S\'ha rebut un missatge d\'intercanvi de claus per a una versió del protocol no
   <string name="ViewBadgeBottomSheetDialogFragment__your_device_doesn_t_support_google_pay_so_you_can_t_subscribe_to_earn_a_badge_you_can_still_support_signal_by_making_a_donation_on_our_website">El vostre dispositiu no és compatible amb Google Pay, de manera que no us hi podeu subscriure per guanyar una insígnia. Podeu donar suport al Signal fent una donació al nostre lloc web.</string>
   <string name="NetworkFailure__network_error_check_your_connection_and_try_again">Error de connexió. Comproveu la connexió i torneu-ho a provar.</string>
   <string name="NetworkFailure__retry">Torneu a provar-ho</string>
+  <!--Stripe decline code generic_failure-->
+  <string name="DeclineCode__try_another_payment_method_or_contact_your_bank">Proveu un altre mètode de pagament o poseu-vos en contacte amb el banc per obtenir-ne més informació.</string>
+  <!--Stripe decline code verify on Google Pay and try again-->
+  <string name="DeclineCode__verify_your_payment_method_is_up_to_date_in_google_pay_and_try_again">Verifiqueu que la forma de pagament estigui actualitzada a Google Pay i torneu-ho a provar.</string>
+  <!--Stripe decline code learn more action label-->
+  <string name="DeclineCode__learn_more">Més informació</string>
+  <!--Stripe decline code contact issuer-->
+  <string name="DeclineCode__verify_your_payment_method_is_up_to_date_in_google_pay_and_try_again_if_the_problem">Verifiqueu que la forma de pagament estigui actualitzada a Google Pay i torneu-ho a provar. Si el problema continua, poseu-vos en contacte amb el banc.</string>
+  <!--Stripe decline code purchase not supported-->
+  <string name="DeclineCode__your_card_does_not_support_this_type_of_purchase">La targeta no admet aquest tipus de compra. Proveu una altra forma de pagament.</string>
+  <!--Stripe decline code your card has expired-->
+  <string name="DeclineCode__your_card_has_expired">La targeta ha caducat. Actualitzeu la forma de pagament a Google Pay i torneu-ho a provar.</string>
+  <!--Stripe decline code go to google pay action label-->
+  <string name="DeclineCode__go_to_google_pay">Ves a Google Pay</string>
+  <!--Stripe decline code incorrect card number-->
+  <string name="DeclineCode__your_card_number_is_incorrect">El número de targeta és incorrecte. Actualitzeu-lo a Google Pay i torneu-ho a provar.</string>
+  <!--Stripe decline code incorrect cvc-->
+  <string name="DeclineCode__your_cards_cvc_number_is_incorrect">El número CVC de la targeta és incorrecte. Actualitzeu-lo a Google Pay i torneu-ho a provar.</string>
+  <!--Stripe decline code insufficient funds-->
+  <string name="DeclineCode__your_card_does_not_have_sufficient_funds">La targeta no té prou fons per completar aquesta compra. Proveu una altra forma de pagament.</string>
+  <!--Stripe decline code incorrect expiration month-->
+  <string name="DeclineCode__the_expiration_month">El mes de caducitat de la forma de pagament és incorrecte. Actualitzeu-lo a Google Pay i torneu-ho a provar.</string>
+  <!--Stripe decline code incorrect expiration year-->
+  <string name="DeclineCode__the_expiration_year">L\'any de caducitat del mètode de pagament és incorrecte. Actualitzeu-lo a Google Pay i torneu-lo a provar.</string>
+  <!--Stripe decline code issuer not available-->
+  <string name="DeclineCode__try_completing_the_payment_again">Proveu de tornar a completar el pagament o poseu-vos en contacte amb el banc per obtenir-ne més informació.</string>
+  <!--Stripe decline code processing error-->
+  <string name="DeclineCode__try_again">Torneu-ho a provar o contacteu amb el banc per obtenir-ne més informació.</string>
+  <!--Title of create notification profile screen-->
+  <string name="EditNotificationProfileFragment__name_your_profile">Nom del perfil</string>
+  <!--Hint text for create/edit notification profile name-->
+  <string name="EditNotificationProfileFragment__profile_name">Nom del perfil</string>
+  <!--Name has a max length, this shows how many characters are used out of the max-->
+  <string name="EditNotificationProfileFragment__count">%1$d/%2$d</string>
+  <!--Call to action button to continue to the next step-->
+  <string name="EditNotificationProfileFragment__next">Següent</string>
+  <!--Call to action button once the profile is named to create the profile and continue to the customization steps-->
+  <string name="EditNotificationProfileFragment__create">Crea</string>
+  <!--Call to action button once the profile name is edited-->
+  <string name="EditNotificationProfileFragment__save">Desats</string>
+  <!--Title of edit notification profile screen-->
+  <string name="EditNotificationProfileFragment__edit_this_profile">Edita aquest perfil</string>
+  <!--Error message shown when attempting to create or edit a profile name to an existing profile name-->
+  <string name="EditNotificationProfileFragment__a_profile_with_this_name_already_exists">Ja existeix un perfil amb aquest nom.</string>
+  <!--Preset selectable name for a profile name, shown as list in edit/create screen-->
+  <string name="EditNotificationProfileFragment__work">Feina</string>
+  <!--Preset selectable name for a profile name, shown as list in edit/create screen-->
+  <string name="EditNotificationProfileFragment__sleep">Dormint</string>
+  <!--Preset selectable name for a profile name, shown as list in edit/create screen-->
+  <string name="EditNotificationProfileFragment__driving">Conduint</string>
+  <!--Preset selectable name for a profile name, shown as list in edit/create screen-->
+  <string name="EditNotificationProfileFragment__downtime">Temps d\'inactivitat</string>
+  <!--Preset selectable name for a profile name, shown as list in edit/create screen-->
+  <string name="EditNotificationProfileFragment__focus">Focus</string>
+  <!--Error message shown when attempting to next/save without a profile name-->
+  <string name="EditNotificationProfileFragment__profile_must_have_a_name">Ha de tenir un nom.</string>
+  <!--Title for add recipients to notification profile screen in create flow-->
+  <string name="AddAllowedMembers__allowed_notifications">Notificacions permeses</string>
+  <!--Description of what the user should be doing with this screen-->
+  <string name="AddAllowedMembers__add_people_and_groups_you_want_notifications_and_calls_from_when_this_profile_is_on">Afegiu persones i grups dels quals rebre notificacions i trucades quan aquest perfil estigui activat.</string>
+  <!--Button text that launches the contact picker to select from-->
+  <string name="AddAllowedMembers__add_people_or_groups">Afegeix persones o grups</string>
+  <!--Call to action button on contact picker for adding to profile-->
+  <string name="SelectRecipientsFragment__add">Afegeix</string>
+  <!--Notification profiles home fragment, shown when no profiles have been created yet-->
+  <string name="NotificationProfilesFragment__create_a_profile_to_receive_notifications_and_calls_only_from_the_people_and_groups_you_want_to_hear_from">Creeu un perfil per rebre notificacions i trucades només de les persones i grups de qui voleu notícies.</string>
+  <!--Header shown above list of all notification profiles-->
+  <string name="NotificationProfilesFragment__profiles">Perfils</string>
+  <!--Button that starts the create new notification profile flow-->
+  <string name="NotificationProfilesFragment__new_profile">Perfil nou</string>
+  <!--Profile active status, indicating the current profile is on for an unknown amount of time-->
+  <string name="NotificationProfilesFragment__on">Actiu</string>
+  <!--Button use to permanently delete a notification profile-->
+  <string name="NotificationProfileDetails__delete_profile">Suprimeix el perfil</string>
+  <!--Snakbar message shown when removing a recipient from a profile-->
+  <string name="NotificationProfileDetails__s_removed">\"%1$s\" suprimit.</string>
+  <!--Snackbar button text that will undo the recipient remove-->
+  <string name="NotificationProfileDetails__undo">Desfés</string>
+  <!--Dialog message shown to confirm deleting a profile-->
+  <string name="NotificationProfileDetails__permanently_delete_profile">Voleu suprimir el perfil permanentment?</string>
+  <!--Dialog button to delete profile-->
+  <string name="NotificationProfileDetails__delete">Suprimits</string>
+  <!--Title/accessibility text for edit icon to edit profile emoji/name-->
+  <string name="NotificationProfileDetails__edit_notification_profile">Edita el perfil de notificacions</string>
+  <!--Schedule description if all days are selected-->
+  <string name="NotificationProfileDetails__everyday">Cada dia</string>
+  <!--Profile status on if it is the active profile-->
+  <string name="NotificationProfileDetails__on">Actiu</string>
+  <!--Profile status on if it is not the active profile-->
+  <string name="NotificationProfileDetails__off">Inactiu</string>
+  <!--Description of hours for schedule (start to end) times-->
+  <string name="NotificationProfileDetails__s_to_s">%1$s a %2$s</string>
+  <!--Section header for exceptions to the notification profile-->
+  <string name="NotificationProfileDetails__exceptions">Excepcions</string>
+  <!--Profile exception to allow all calls through the profile restrictions-->
+  <string name="NotificationProfileDetails__allow_all_calls">Permet totes les trucades</string>
+  <!--Profile exception to allow all @mentions through the profile restrictions-->
+  <string name="NotificationProfileDetails__notify_for_all_mentions">Notifica totes les mencions</string>
+  <!--Section header for showing schedule information-->
+  <string name="NotificationProfileDetails__schedule">Programació</string>
+  <!--If member list is long, will truncate the list and show an option to then see all when tapped-->
+  <string name="NotificationProfileDetails__see_all">Mostra-ho tot</string>
+  <!--Title for add schedule to profile in create flow-->
+  <string name="EditNotificationProfileSchedule__add_a_schedule">Afegeix-hi una programació</string>
+  <!--Descriptor text indicating what the user can do with this screen-->
+  <string name="EditNotificationProfileSchedule__set_up_a_schedule_to_enable_this_notification_profile_automatically">Configureu una programació per habilitar aquest perfil de notificació automàticament.</string>
+  <!--Text shown next to toggle switch to enable/disable schedule-->
+  <string name="EditNotificationProfileSchedule__schedule">Programació</string>
+  <!--Label for showing the start time for the schedule-->
+  <string name="EditNotificationProfileSchedule__start">Inicia</string>
+  <!--Label for showing the end time for the schedule-->
+  <string name="EditNotificationProfileSchedule__end">Finalitza</string>
+  <!--First letter of Sunday-->
+  <string name="EditNotificationProfileSchedule__sunday_first_letter">Dg</string>
+  <!--First letter of Monday-->
+  <string name="EditNotificationProfileSchedule__monday_first_letter">Dl</string>
+  <!--First letter of Tuesday-->
+  <string name="EditNotificationProfileSchedule__tuesday_first_letter">Dt</string>
+  <!--First letter of Wednesday-->
+  <string name="EditNotificationProfileSchedule__wednesday_first_letter">Dc</string>
+  <!--First letter of Thursday-->
+  <string name="EditNotificationProfileSchedule__thursday_first_letter">Dj</string>
+  <!--First letter of Friday-->
+  <string name="EditNotificationProfileSchedule__friday_first_letter">Dv</string>
+  <!--First letter of Saturday-->
+  <string name="EditNotificationProfileSchedule__saturday_first_letter">Ds</string>
+  <!--Title of select time dialog shown when setting start time for schedule-->
+  <string name="EditNotificationProfileSchedule__set_start_time">Estableix l\'hora d\'inici</string>
+  <!--Title of select time dialog shown when setting end time for schedule-->
+  <string name="EditNotificationProfileSchedule__set_end_time">Estableix l\'hora d\'acabar</string>
+  <!--If in edit mode, call to action button text show to save schedule to profile-->
+  <string name="EditNotificationProfileSchedule__save">Desats</string>
+  <!--If in create mode, call to action button text to show to skip enabling a schedule-->
+  <string name="EditNotificationProfileSchedule__skip">Omet</string>
+  <!--If in create mode, call to action button text to show to use the enabled schedule and move to the next screen-->
+  <string name="EditNotificationProfileSchedule__next">Següent</string>
+  <!--Error message shown if trying to save/use a schedule with no days selected-->
+  <string name="EditNotificationProfileSchedule__schedule_must_have_at_least_one_day">El programa ha de tenir almenys un dia.</string>
+  <!--Title for final screen shown after completing a profile creation-->
+  <string name="NotificationProfileCreated__profile_created">Perfil creat</string>
+  <!--Call to action button to press to close the created screen and move to the profile details screen-->
+  <string name="NotificationProfileCreated__done">Fet</string>
+  <!--Descriptor text shown to indicate how to manually turn a profile on/off-->
+  <string name="NotificationProfileCreated__you_can_turn_your_profile_on_or_off_manually_via_the_menu_on_the_chat_list">Podeu activar o desactivar el perfil manualment mitjançant el menú de la llista de converses.</string>
+  <!--Descriptor text shown to indicate you can add a schedule later since you did not add one during create flow-->
+  <string name="NotificationProfileCreated__add_a_schedule_in_settings_to_automate_your_profile">Afegiu una programació a la configuració per automatitzar el perfil.</string>
+  <!--Descriptor text shown to indicate your profile will follow the schedule set during create flow-->
+  <string name="NotificationProfileCreated__your_profile_will_turn_on_and_off_automatically_according_to_your_schedule">El perfil s\'activarà i es desactivarà automàticament segons la programació.</string>
+  <!--Button text shown in profile selection bottom sheet to create a new profile-->
+  <string name="NotificationProfileSelection__new_profile">Perfil nou</string>
+  <!--Manual enable option to manually enable a profile for 1 hour-->
+  <string name="NotificationProfileSelection__for_1_hour">Durant 1 hora</string>
+  <!--Manual enable option to manually enable a profile until a set time (currently 6pm or 8am depending on what is next)-->
+  <string name="NotificationProfileSelection__until_s">Fins a %1$s</string>
+  <!--Option to view profile details-->
+  <string name="NotificationProfileSelection__view_settings">Mostra\'n la configuració</string>
+  <!--Descriptor text indicating how long a profile will be on when there is a time component associated with it-->
+  <string name="NotificationProfileSelection__on_until_s">Actiu fins %1$s</string>
+  <!--Title for notification profile megaphone-->
+  <string name="NotificationProfilesMegaphone__notification_profiles">Perfils de notificacions</string>
+  <!--Description for notification profile megaphone-->
+  <string name="NotificationProfilesMegaphone__only_get_notifications_from_the_people_and_groups_you_choose">Només rebeu notificacions de les persones i grups que trieu.</string>
+  <!--Call to action button to create a profile from megaphone-->
+  <string name="NotificationProfilesMegaphone__create_a_profile">Crea un perfil</string>
+  <!--Button to dismiss notification profile megaphone-->
+  <string name="NotificationProfilesMegaphone__not_now">Ara no</string>
+  <!--Displayed in a toast when we fail to open the ringtone picker-->
+  <string name="NotificationSettingsFragment__failed_to_open_picker">Ha fallat obrir el selector.</string>
+  <!--Description shown for the Signal Release Notes channel-->
+  <string name="ReleaseNotes__signal_release_notes_and_news">Notes de la versió del Signal i Notícies</string>
   <!--EOF-->
 </resources>

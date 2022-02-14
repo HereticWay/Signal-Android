@@ -38,7 +38,8 @@ import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.KbsPinData;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.ACI;
-import org.whispersystems.signalservice.api.util.UuidUtil;
+import org.whispersystems.signalservice.api.push.PNI;
+import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.internal.ServiceResponse;
 import org.whispersystems.signalservice.internal.push.VerifyAccountResponse;
 
@@ -130,13 +131,14 @@ public final class RegistrationRepository {
     SenderKeyUtil.clearAllState(context);
 
     ACI     aci    = ACI.parseOrThrow(response.getUuid());
+    PNI     pni    = PNI.parseOrThrow(response.getPni());
     boolean hasPin = response.isStorageCapable();
 
     IdentityKeyPair    identityKey  = IdentityKeyUtil.getIdentityKeyPair(context);
     List<PreKeyRecord> records      = PreKeyUtil.generatePreKeys(context);
     SignedPreKeyRecord signedPreKey = PreKeyUtil.generateSignedPreKey(context, identityKey, true);
 
-    SignalServiceAccountManager accountManager = AccountManagerFactory.createAuthenticated(context, aci, registrationData.getE164(), registrationData.getPassword());
+    SignalServiceAccountManager accountManager = AccountManagerFactory.createAuthenticated(context, aci, registrationData.getE164(), SignalServiceAddress.DEFAULT_DEVICE_ID, registrationData.getPassword());
     accountManager.setPreKeys(identityKey.getPublicKey(), signedPreKey, records);
 
     if (registrationData.isFcm()) {
@@ -148,16 +150,18 @@ public final class RegistrationRepository {
 
     recipientDatabase.setProfileSharing(selfId, true);
     recipientDatabase.markRegisteredOrThrow(selfId, aci);
+    recipientDatabase.setPni(selfId, pni);
 
     SignalStore.account().setE164(registrationData.getE164());
     SignalStore.account().setAci(aci);
+    SignalStore.account().setPni(pni);
     recipientDatabase.setProfileKey(selfId, registrationData.getProfileKey());
     ApplicationDependencies.getRecipientCache().clearSelf();
 
     SignalStore.account().setFcmToken(registrationData.getFcmToken());
     SignalStore.account().setFcmEnabled(registrationData.isFcm());
 
-    ApplicationDependencies.getIdentityStore()
+    ApplicationDependencies.getProtocolStore().aci().identities()
                            .saveIdentityWithoutSideEffects(selfId,
                                                            identityKey.getPublicKey(),
                                                            IdentityDatabase.VerifiedStatus.VERIFIED,

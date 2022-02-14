@@ -10,7 +10,6 @@ import android.os.SystemClock
 import android.preference.PreferenceManager
 import android.text.TextUtils
 import com.annimon.stream.Stream
-import com.bumptech.glide.Glide
 import com.google.protobuf.InvalidProtocolBufferException
 import net.zetetic.database.sqlcipher.SQLiteDatabase
 import org.signal.core.util.logging.Log
@@ -178,8 +177,16 @@ object SignalDatabaseMigrations {
   private const val SENDER_KEY_UUID = 119
   private const val SENDER_KEY_SHARED_TIMESTAMP = 120
   private const val REACTION_REFACTOR = 121
+  private const val PNI = 122
+  private const val NOTIFICATION_PROFILES = 123
+  private const val NOTIFICATION_PROFILES_END_FIX = 124
+  private const val REACTION_BACKUP_CLEANUP = 125
+  private const val REACTION_REMOTE_DELETE_CLEANUP = 126
+  private const val PNI_CLEANUP = 127
+  private const val MESSAGE_RANGES = 128
+  private const val REACTION_TRIGGER_FIX = 129
 
-  const val DATABASE_VERSION = 121
+  const val DATABASE_VERSION = 129
 
   @JvmStatic
   fun migrate(context: Context, db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
@@ -479,7 +486,7 @@ object SignalDatabaseMigrations {
     }
 
     if (oldVersion < SELF_ATTACHMENT_CLEANUP) {
-      val localNumber = SignalStore.account().e164
+      val localNumber = PreferenceManager.getDefaultSharedPreferences(context).getString("pref_local_number", null)
       if (!TextUtils.isEmpty(localNumber)) {
         db.rawQuery("SELECT _id FROM thread WHERE recipient_ids = ?", arrayOf(localNumber)).use { threadCursor ->
           if (threadCursor != null && threadCursor.moveToFirst()) {
@@ -591,7 +598,7 @@ object SignalDatabaseMigrations {
 
     if (oldVersion < RECIPIENT_SEARCH) {
       db.execSQL("ALTER TABLE recipient ADD COLUMN system_phone_type INTEGER DEFAULT -1")
-      val localNumber = SignalStore.account().e164
+      val localNumber = PreferenceManager.getDefaultSharedPreferences(context).getString("pref_local_number", null)
       if (!TextUtils.isEmpty(localNumber)) {
         db.query("recipient", null, "phone = ?", arrayOf(localNumber), null, null, null).use { cursor ->
           if (cursor == null || !cursor.moveToFirst()) {
@@ -694,7 +701,6 @@ object SignalDatabaseMigrations {
 
     if (oldVersion < ATTACHMENT_CLEAR_HASHES_2) {
       db.execSQL("UPDATE part SET data_hash = null")
-      Glide.get(context).clearDiskCache()
     }
 
     if (oldVersion < UUIDS) {
@@ -791,7 +797,7 @@ object SignalDatabaseMigrations {
     }
 
     if (oldVersion < PROFILE_KEY_TO_DB) {
-      val localNumber = SignalStore.account().e164
+      val localNumber = PreferenceManager.getDefaultSharedPreferences(context).getString("pref_local_number", null)
       if (!TextUtils.isEmpty(localNumber)) {
         val encodedProfileKey = PreferenceManager.getDefaultSharedPreferences(context).getString("pref_profile_key", null)
         val profileKey = if (encodedProfileKey != null) Base64.decodeOrThrow(encodedProfileKey) else Util.getSecretBytes(32)
@@ -852,7 +858,7 @@ object SignalDatabaseMigrations {
     }
 
     if (oldVersion < PROFILE_DATA_MIGRATION) {
-      val localNumber = SignalStore.account().e164
+      val localNumber = PreferenceManager.getDefaultSharedPreferences(context).getString("pref_local_number", null)
       if (localNumber != null) {
         val encodedProfileName = PreferenceManager.getDefaultSharedPreferences(context).getString("pref_profile_name", null)
         val profileName = ProfileName.fromSerialized(encodedProfileName)
@@ -2169,6 +2175,115 @@ object SignalDatabaseMigrations {
       db.execSQL("CREATE TRIGGER reactions_mms_delete AFTER DELETE ON mms BEGIN DELETE FROM reaction WHERE message_id = old._id AND is_mms = 0; END")
       db.execSQL("UPDATE sms SET reactions = NULL WHERE reactions NOT NULL")
       db.execSQL("UPDATE mms SET reactions = NULL WHERE reactions NOT NULL")
+    }
+
+    if (oldVersion < PNI) {
+      db.execSQL("ALTER TABLE recipient ADD COLUMN pni TEXT DEFAULT NULL")
+      db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS recipient_pni_index ON recipient (pni)")
+    }
+
+    if (oldVersion < NOTIFICATION_PROFILES) {
+      db.execSQL(
+        // language=sql
+        """
+          CREATE TABLE notification_profile (
+            _id INTEGER PRIMARY KEY AUTOINCREMENT, 
+            name TEXT NOT NULL UNIQUE,
+            emoji TEXT NOT NULL,
+            color TEXT NOT NULL,
+            created_at INTEGER NOT NULL,
+            allow_all_calls INTEGER NOT NULL DEFAULT 0,
+            allow_all_mentions INTEGER NOT NULL DEFAULT 0
+          )
+        """.trimIndent()
+      )
+
+      db.execSQL(
+        // language=sql
+        """
+          CREATE TABLE notification_profile_schedule (
+            _id INTEGER PRIMARY KEY AUTOINCREMENT,
+            notification_profile_id INTEGER NOT NULL REFERENCES notification_profile (_id) ON DELETE CASCADE,
+            enabled INTEGER NOT NULL DEFAULT 0,
+            start INTEGER NOT NULL,
+            end INTEGER NOT NULL,
+            days_enabled TEXT NOT NULL
+          )
+        """.trimIndent()
+      )
+
+      db.execSQL(
+        // language=sql
+        """
+          CREATE TABLE notification_profile_allowed_members (
+            _id INTEGER PRIMARY KEY AUTOINCREMENT,
+            notification_profile_id INTEGER NOT NULL REFERENCES notification_profile (_id) ON DELETE CASCADE,
+            recipient_id INTEGER NOT NULL,
+            UNIQUE(notification_profile_id, recipient_id) ON CONFLICT REPLACE)
+        """.trimIndent()
+      )
+
+      db.execSQL("CREATE INDEX notification_profile_schedule_profile_index ON notification_profile_schedule (notification_profile_id)")
+      db.execSQL("CREATE INDEX notification_profile_allowed_members_profile_index ON notification_profile_allowed_members (notification_profile_id)")
+    }
+
+    if (oldVersion < NOTIFICATION_PROFILES_END_FIX) {
+      db.execSQL(
+        // language=sql
+        """
+          UPDATE notification_profile_schedule SET end = 2400 WHERE end = 0
+        """.trimIndent()
+      )
+    }
+
+    if (oldVersion < REACTION_BACKUP_CLEANUP) {
+      db.execSQL(
+        // language=sql
+        """
+          DELETE FROM reaction
+          WHERE
+            (is_mms = 0 AND message_id NOT IN (SELECT _id FROM sms))
+            OR
+            (is_mms = 1 AND message_id NOT IN (SELECT _id FROM mms))
+        """.trimIndent()
+      )
+    }
+
+    if (oldVersion < REACTION_REMOTE_DELETE_CLEANUP) {
+      db.execSQL(
+        // language=sql
+        """
+          DELETE FROM reaction
+          WHERE
+            (is_mms = 0 AND message_id IN (SELECT _id from sms WHERE remote_deleted = 1))
+            OR
+            (is_mms = 1 AND message_id IN (SELECT _id from mms WHERE remote_deleted = 1))
+        """.trimIndent()
+      )
+    }
+
+    if (oldVersion < PNI_CLEANUP) {
+      db.execSQL("UPDATE recipient SET pni = NULL WHERE phone IS NULL")
+    }
+
+    if (oldVersion < MESSAGE_RANGES) {
+      db.execSQL("ALTER TABLE mms ADD COLUMN ranges BLOB DEFAULT NULL")
+    }
+
+    if (oldVersion < REACTION_TRIGGER_FIX) {
+      db.execSQL("DROP TRIGGER reactions_mms_delete")
+      db.execSQL("CREATE TRIGGER reactions_mms_delete AFTER DELETE ON mms BEGIN DELETE FROM reaction WHERE message_id = old._id AND is_mms = 1; END")
+
+      db.execSQL(
+        // language=sql
+        """
+          DELETE FROM reaction
+          WHERE
+            (is_mms = 0 AND message_id NOT IN (SELECT _id from sms))
+            OR
+            (is_mms = 1 AND message_id NOT IN (SELECT _id from mms))
+        """.trimIndent()
+      )
     }
   }
 

@@ -308,8 +308,6 @@
               android:allowEmbedded="true"
               android:resizeableActivity="true" />
 
-    <activity android:name=".longmessage.LongMessageActivity" />
-
     <activity android:name=".conversation.ConversationPopupActivity"
               android:windowSoftInputMode="stateVisible"
               android:launchMode="singleTask"
@@ -380,7 +378,7 @@
               android:label="@string/AndroidManifest__change_passphrase"
               android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"/>
 
-    <activity android:name=".VerifyIdentityActivity"
+    <activity android:name=".verify.VerifyIdentityActivity"
               android:theme="@style/Signal.DayNight.NoActionBar"
               android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"/>
 
@@ -428,7 +426,7 @@
     <activity android:name=".registration.RegistrationNavigationActivity"
               android:launchMode="singleTask"
               android:theme="@style/TextSecure.LightRegistrationTheme"
-              android:windowSoftInputMode="stateUnchanged"
+              android:windowSoftInputMode="stateHidden"
               android:configChanges="touchscreen|keyboard|keyboardHidden|orientation|screenLayout|screenSize"/>
 
     <activity android:name=".revealable.ViewOnceMessageActivity"

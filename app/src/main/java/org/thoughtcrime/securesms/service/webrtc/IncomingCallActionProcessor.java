@@ -68,12 +68,14 @@ public class IncomingCallActionProcessor extends DeviceAwareActionProcessor {
       webRtcInteractor.getCallManager().proceed(activePeer.getCallId(),
                                                 context,
                                                 videoState.getLockableEglBase().require(),
+                                                AudioProcessingMethodSelector.get(),
                                                 videoState.requireLocalSink(),
                                                 callParticipant.getVideoSink(),
                                                 videoState.requireCamera(),
                                                 iceServers,
                                                 hideIp,
                                                 NetworkUtil.getCallingBandwidthMode(context),
+                                                null,
                                                 false);
     } catch (CallException e) {
       return callFailure(currentState, "Unable to proceed with call: ", e);

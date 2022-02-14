@@ -47,6 +47,7 @@ import org.thoughtcrime.securesms.ringrtc.RemotePeer;
 import org.thoughtcrime.securesms.service.webrtc.state.WebRtcServiceState;
 import org.thoughtcrime.securesms.util.AppForegroundObserver;
 import org.thoughtcrime.securesms.util.BubbleUtil;
+import org.thoughtcrime.securesms.util.NetworkUtil;
 import org.thoughtcrime.securesms.util.RecipientAccessList;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
 import org.thoughtcrime.securesms.util.Util;
@@ -472,7 +473,6 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
           return p.handleReceivedOfferWhileActive(s, remotePeer);
         case ENDED_LOCAL_HANGUP:
         case ENDED_APP_DROPPED_CALL:
-        case IGNORE_CALLS_FROM_NON_MULTIRING_CALLERS:
           Log.i(TAG, "Ignoring event: " + event);
           break;
         default:
@@ -485,6 +485,16 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
 
   @Override public void onNetworkRouteChanged(Remote remote, NetworkRoute networkRoute) {
     Log.i(TAG, "onNetworkRouteChanged: localAdapterType: " + networkRoute.getLocalAdapterType());
+    try {
+      callManager.updateBandwidthMode(NetworkUtil.getCallingBandwidthMode(context, networkRoute.getLocalAdapterType()));
+    } catch (CallException e) {
+      Log.w(TAG, "Unable to update bandwidth mode on CallManager", e);
+    }
+  }
+
+  @Override 
+  public void onAudioLevels(Remote remote, int capturedLevel, int receivedLevel) {
+    // TODO: Implement audio level handling for direct calls.
   }
 
   @Override
@@ -562,17 +572,17 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
   }
 
   @Override
-  public void onSendHangup(@NonNull CallId callId, @Nullable Remote remote, @NonNull Integer remoteDevice, @NonNull Boolean broadcast, @NonNull CallManager.HangupType hangupType, @NonNull Integer deviceId, @NonNull Boolean useLegacyHangupMessage) {
+  public void onSendHangup(@NonNull CallId callId, @Nullable Remote remote, @NonNull Integer remoteDevice, @NonNull Boolean broadcast, @NonNull CallManager.HangupType hangupType, @NonNull Integer deviceId) {
     if (!(remote instanceof RemotePeer)) {
       return;
     }
 
     RemotePeer remotePeer = (RemotePeer) remote;
 
-    Log.i(TAG, "onSendHangup: id: " + remotePeer.getCallId().format(remoteDevice) + " type: " + hangupType.name() + " isLegacy: " + useLegacyHangupMessage);
+    Log.i(TAG, "onSendHangup: id: " + remotePeer.getCallId().format(remoteDevice) + " type: " + hangupType.name());
 
     WebRtcData.CallMetadata   callMetadata   = new WebRtcData.CallMetadata(remotePeer, remoteDevice);
-    WebRtcData.HangupMetadata hangupMetadata = new WebRtcData.HangupMetadata(WebRtcUtil.getHangupTypeFromCallHangupType(hangupType), useLegacyHangupMessage, deviceId);
+    WebRtcData.HangupMetadata hangupMetadata = new WebRtcData.HangupMetadata(WebRtcUtil.getHangupTypeFromCallHangupType(hangupType), false, deviceId);
 
     process((s, p) -> p.handleSendHangup(s, callMetadata, hangupMetadata, broadcast));
   }
@@ -606,7 +616,7 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
       }
       try {
         messageSender.sendCallMessage(RecipientUtil.toSignalServiceAddress(context, recipient),
-                                      UnidentifiedAccessUtil.getAccessFor(context, recipient),
+                                      recipient.isSelf() ? Optional.absent() : UnidentifiedAccessUtil.getAccessFor(context, recipient),
                                       callMessage);
       } catch (UntrustedIdentityException e) {
         Log.i(TAG, "sendOpaqueCallMessage onFailure: ", e);
@@ -749,6 +759,11 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
   }
 
   @Override
+  public void onAudioLevels(@NonNull GroupCall groupCall) {
+    // TODO: Implement audio level handling for group calls.
+  }
+
+  @Override
   public void onRemoteDeviceStatesChanged(@NonNull GroupCall groupCall) {
     process((s, p) -> p.handleGroupRemoteDeviceStateChanged(s));
   }
@@ -842,11 +857,11 @@ public final class SignalCallManager implements CallManager.Observer, GroupCall.
 
   public void updateGroupCallUpdateMessage(@NonNull RecipientId groupId, @Nullable String groupCallEraId, @NonNull Collection<UUID> joinedMembers, boolean isCallFull) {
     SignalExecutors.BOUNDED.execute(() -> SignalDatabase.sms().insertOrUpdateGroupCall(groupId,
-                                                                                                          Recipient.self().getId(),
-                                                                                                          System.currentTimeMillis(),
-                                                                                                          groupCallEraId,
-                                                                                                          joinedMembers,
-                                                                                                          isCallFull));
+                                                                                       Recipient.self().getId(),
+                                                                                       System.currentTimeMillis(),
+                                                                                       groupCallEraId,
+                                                                                       joinedMembers,
+                                                                                       isCallFull));
   }
 
   public void sendCallMessage(@NonNull final RemotePeer remotePeer,

@@ -3,6 +3,7 @@ package org.thoughtcrime.securesms.util;
 import android.text.TextUtils;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.annotation.WorkerThread;
 
@@ -62,6 +63,7 @@ public final class FeatureFlags {
   private static final String PHONE_NUMBER_PRIVACY_VERSION      = "android.phoneNumberPrivacyVersion";
   private static final String CLIENT_EXPIRATION                 = "android.clientExpiration";
   public  static final String DONATE_MEGAPHONE                  = "android.donate.2";
+  public  static final String VALENTINES_DONATE_MEGAPHONE       = "android.donate.valentines.2022";
   private static final String CUSTOM_VIDEO_MUXER                = "android.customVideoMuxer";
   private static final String CDS_REFRESH_INTERVAL              = "cds.syncInterval.seconds";
   private static final String AUTOMATIC_SESSION_RESET           = "android.automaticSessionReset.2";
@@ -83,10 +85,12 @@ public final class FeatureFlags {
   private static final String SUGGEST_SMS_BLACKLIST             = "android.suggestSmsBlacklist";
   private static final String MAX_GROUP_CALL_RING_SIZE          = "global.calling.maxGroupCallRingSize";
   private static final String GROUP_CALL_RINGING                = "android.calling.groupCallRinging";
-  private static final String CHANGE_NUMBER_ENABLED             = "android.changeNumber";
+  private static final String CHANGE_NUMBER_ENABLED             = "android.changeNumber.3";
   private static final String DONOR_BADGES                      = "android.donorBadges.6";
   private static final String DONOR_BADGES_DISPLAY              = "android.donorBadges.display.4";
   private static final String CDSH                              = "android.cdsh";
+  private static final String HARDWARE_AEC_MODELS               = "android.calling.hardwareAecModels";
+  private static final String FORCE_DEFAULT_AEC                 = "android.calling.forceDefaultAec";
 
   /**
    * We will only store remote values for flags in this set. If you want a flag to be controllable
@@ -126,13 +130,16 @@ public final class FeatureFlags {
       CDSH,
       SENDER_KEY_MAX_AGE,
       DONOR_BADGES,
-      DONOR_BADGES_DISPLAY
+      DONOR_BADGES_DISPLAY,
+      CHANGE_NUMBER_ENABLED,
+      HARDWARE_AEC_MODELS,
+      FORCE_DEFAULT_AEC,
+      VALENTINES_DONATE_MEGAPHONE
   );
 
   @VisibleForTesting
   static final Set<String> NOT_REMOTE_CAPABLE = SetUtil.newHashSet(
-      PHONE_NUMBER_PRIVACY_VERSION,
-      CHANGE_NUMBER_ENABLED
+      PHONE_NUMBER_PRIVACY_VERSION
   );
 
   /**
@@ -180,7 +187,10 @@ public final class FeatureFlags {
       GROUP_CALL_RINGING,
       CDSH,
       SENDER_KEY_MAX_AGE,
-      DONOR_BADGES_DISPLAY
+      DONOR_BADGES_DISPLAY,
+      DONATE_MEGAPHONE,
+      FORCE_DEFAULT_AEC,
+      VALENTINES_DONATE_MEGAPHONE
   );
 
   /**
@@ -296,6 +306,11 @@ public final class FeatureFlags {
     return getString(DONATE_MEGAPHONE, "");
   }
 
+  /** The raw valentine's day donate megaphone CSV string */
+  public static String valentinesDonateMegaphone() {
+    return getString(VALENTINES_DONATE_MEGAPHONE, "");
+  }
+
   /**
    * Whether the user can choose phone number privacy settings, and;
    * Whether to fetch and store the secondary certificate
@@ -403,11 +418,8 @@ public final class FeatureFlags {
     return getBoolean(CHANGE_NUMBER_ENABLED, false);
   }
 
-  /** Whether or not to show donor badges in the UI.
-   *
-   * WARNING: Donor Badges is an unfinished feature and should not be enabled in production builds.
-   *    Enabling this flag in a custom build can result in crashes and could result in your Google Pay
-   *    account being charged real money.
+  /**
+   * Whether or not to show donor badges in the UI.
    */
   public static boolean donorBadges() {
     if (Environment.IS_STAGING) {
@@ -426,6 +438,16 @@ public final class FeatureFlags {
 
   public static boolean cdsh() {
     return Environment.IS_STAGING && getBoolean(CDSH, false);
+  }
+
+  /** A comma-separated list of models that should use hardware AEC for calling. */
+  public static @NonNull String hardwareAecModels() {
+    return getString(HARDWARE_AEC_MODELS, "");
+  }
+
+  /** Whether or not all devices should be forced into using default AEC for calling. */
+  public static boolean forceDefaultAec() {
+    return getBoolean(FORCE_DEFAULT_AEC, false);
   }
 
   /** Only for rendering debug info. */

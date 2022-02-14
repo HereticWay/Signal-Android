@@ -105,12 +105,14 @@ public class OutgoingCallActionProcessor extends DeviceAwareActionProcessor {
       webRtcInteractor.getCallManager().proceed(activePeer.getCallId(),
                                                 context,
                                                 videoState.getLockableEglBase().require(),
+                                                AudioProcessingMethodSelector.get(),
                                                 videoState.requireLocalSink(),
                                                 callParticipant.getVideoSink(),
                                                 videoState.requireCamera(),
                                                 iceServers,
                                                 isAlwaysTurn,
                                                 NetworkUtil.getCallingBandwidthMode(context),
+                                                null,
                                                 currentState.getCallSetupState(activePeer).isEnableVideoOnCreate());
     } catch (CallException e) {
       return callFailure(currentState, "Unable to proceed with call: ", e);
@@ -149,7 +151,7 @@ public class OutgoingCallActionProcessor extends DeviceAwareActionProcessor {
       byte[] remoteIdentityKey = WebRtcUtil.getPublicKeyBytes(receivedAnswerMetadata.getRemoteIdentityKey());
       byte[] localIdentityKey  = WebRtcUtil.getPublicKeyBytes(IdentityKeyUtil.getIdentityKey(context).serialize());
 
-      webRtcInteractor.getCallManager().receivedAnswer(callMetadata.getCallId(), callMetadata.getRemoteDevice(), answerMetadata.getOpaque(), receivedAnswerMetadata.isMultiRing(), remoteIdentityKey, localIdentityKey);
+      webRtcInteractor.getCallManager().receivedAnswer(callMetadata.getCallId(), callMetadata.getRemoteDevice(), answerMetadata.getOpaque(), remoteIdentityKey, localIdentityKey);
     } catch (CallException | InvalidKeyException e) {
       return callFailure(currentState, "receivedAnswer() failed: ", e);
     }
