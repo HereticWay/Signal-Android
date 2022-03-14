@@ -6,13 +6,12 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.whispersystems.libsignal.logging.Log;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.OptionalUtil;
 import org.whispersystems.signalservice.api.util.ProtoUtil;
-import org.whispersystems.signalservice.api.util.UuidUtil;
 import org.whispersystems.signalservice.internal.storage.protos.ContactRecord;
 import org.whispersystems.signalservice.internal.storage.protos.ContactRecord.IdentityState;
-import org.whispersystems.signalservice.internal.storage.protos.GroupV2Record;
 
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -39,7 +38,7 @@ public final class SignalContactRecord implements SignalRecord {
     this.proto            = proto;
     this.hasUnknownFields = ProtoUtil.hasUnknownFields(proto);
 
-    this.address     = new SignalServiceAddress(ACI.parseOrUnknown(proto.getServiceUuid()), proto.getServiceE164());
+    this.address     = new SignalServiceAddress(ServiceId.parseOrUnknown(proto.getServiceUuid()), proto.getServiceE164());
     this.givenName   = OptionalUtil.absentIfEmpty(proto.getGivenName());
     this.familyName  = OptionalUtil.absentIfEmpty(proto.getFamilyName());
     this.profileKey  = OptionalUtil.absentIfEmpty(proto.getProfileKey());
@@ -71,7 +70,7 @@ public final class SignalContactRecord implements SignalRecord {
         diff.add("E164");
       }
 
-      if (!Objects.equals(this.getAddress().getAci(), that.getAddress().getAci())) {
+      if (!Objects.equals(this.getAddress().getServiceId(), that.getAddress().getServiceId())) {
         diff.add("UUID");
       }
 
@@ -117,6 +116,10 @@ public final class SignalContactRecord implements SignalRecord {
 
       if (!Objects.equals(this.getMuteUntil(), that.getMuteUntil())) {
         diff.add("MuteUntil");
+      }
+
+      if (shouldHideStory() != that.shouldHideStory()) {
+        diff.add("HideStory");
       }
 
       if (!Objects.equals(this.hasUnknownFields(), that.hasUnknownFields())) {
@@ -185,6 +188,10 @@ public final class SignalContactRecord implements SignalRecord {
     return proto.getMutedUntilTimestamp();
   }
 
+  public boolean shouldHideStory() {
+    return proto.getHideStory();
+  }
+
   ContactRecord toProto() {
     return proto;
   }
@@ -216,7 +223,7 @@ public final class SignalContactRecord implements SignalRecord {
         this.builder = ContactRecord.newBuilder();
       }
 
-      builder.setServiceUuid(address.getAci().toString());
+      builder.setServiceUuid(address.getServiceId().toString());
       builder.setServiceE164(address.getNumber().or(""));
     }
 
@@ -272,6 +279,11 @@ public final class SignalContactRecord implements SignalRecord {
 
     public Builder setMuteUntil(long muteUntil) {
       builder.setMutedUntilTimestamp(muteUntil);
+      return this;
+    }
+
+    public Builder setHideStory(boolean hideStory) {
+      builder.setHideStory(hideStory);
       return this;
     }
 

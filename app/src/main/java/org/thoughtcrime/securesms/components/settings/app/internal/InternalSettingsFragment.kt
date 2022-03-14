@@ -198,11 +198,11 @@ class InternalSettingsFragment : DSLSettingsFragment(R.string.preferences__inter
       sectionHeaderPref(R.string.preferences__internal_network)
 
       switchPref(
-        title = DSLSettingsText.from(R.string.preferences__internal_force_censorship),
-        summary = DSLSettingsText.from(R.string.preferences__internal_force_censorship_description),
-        isChecked = state.forceCensorship,
+        title = DSLSettingsText.from(R.string.preferences__internal_allow_censorship_toggle),
+        summary = DSLSettingsText.from(R.string.preferences__internal_allow_censorship_toggle_description),
+        isChecked = state.allowCensorshipSetting,
         onClick = {
-          viewModel.setForceCensorship(!state.forceCensorship)
+          viewModel.setAllowCensorshipSetting(!state.allowCensorshipSetting)
         }
       )
 
@@ -353,6 +353,13 @@ class InternalSettingsFragment : DSLSettingsFragment(R.string.preferences__inter
       sectionHeaderPref(R.string.preferences__internal_release_channel)
 
       clickPref(
+        title = DSLSettingsText.from(R.string.preferences__internal_release_channel_set_last_version),
+        onClick = {
+          SignalStore.releaseChannelValues().highestVersionNoteReceived = max(SignalStore.releaseChannelValues().highestVersionNoteReceived - 10, 0)
+        }
+      )
+
+      clickPref(
         title = DSLSettingsText.from(R.string.preferences__internal_fetch_release_channel),
         onClick = {
           SignalStore.releaseChannelValues().previousManifestMd5 = ByteArray(0)
@@ -361,9 +368,20 @@ class InternalSettingsFragment : DSLSettingsFragment(R.string.preferences__inter
       )
 
       clickPref(
-        title = DSLSettingsText.from(R.string.preferences__internal_release_channel_set_last_version),
+        title = DSLSettingsText.from(R.string.preferences__internal_add_sample_note),
         onClick = {
-          SignalStore.releaseChannelValues().highestVersionNoteReceived = max(SignalStore.releaseChannelValues().highestVersionNoteReceived - 10, 0)
+          viewModel.addSampleReleaseNote()
+        }
+      )
+
+      dividerPref()
+
+      sectionHeaderPref(R.string.ConversationListTabs__stories)
+      switchPref(
+        title = DSLSettingsText.from(R.string.preferences__internal_disable_stories),
+        isChecked = state.disableStories,
+        onClick = {
+          viewModel.toggleStories()
         }
       )
     }

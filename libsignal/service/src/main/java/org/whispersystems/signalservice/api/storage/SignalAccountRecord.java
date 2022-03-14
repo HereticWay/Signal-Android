@@ -6,12 +6,11 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import org.whispersystems.libsignal.logging.Log;
 import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.payments.PaymentsConstants;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId;
 import org.whispersystems.signalservice.api.push.SignalServiceAddress;
 import org.whispersystems.signalservice.api.util.OptionalUtil;
 import org.whispersystems.signalservice.api.util.ProtoUtil;
 import org.whispersystems.signalservice.internal.storage.protos.AccountRecord;
-import org.whispersystems.signalservice.internal.storage.protos.GroupV2Record;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -316,7 +315,13 @@ public final class SignalAccountRecord implements SignalRecord {
 
     static PinnedConversation fromRemote(AccountRecord.PinnedConversation remote) {
       if (remote.hasContact()) {
-        return forContact(new SignalServiceAddress(ACI.parseOrThrow(remote.getContact().getUuid()), remote.getContact().getE164()));
+        ServiceId serviceId = ServiceId.parseOrNull(remote.getContact().getUuid());
+        if (serviceId != null) {
+          return forContact(new SignalServiceAddress(serviceId, remote.getContact().getE164()));
+        } else {
+          Log.w(TAG, "Bad serviceId on pinned contact! Length: " + remote.getContact().getUuid());
+          return PinnedConversation.forEmpty();
+        }
       } else if (!remote.getLegacyGroupId().isEmpty()) {
         return forGroupV1(remote.getLegacyGroupId().toByteArray());
       } else if (!remote.getGroupMasterKey().isEmpty()) {
@@ -346,7 +351,7 @@ public final class SignalAccountRecord implements SignalRecord {
       if (contact.isPresent()) {
         AccountRecord.PinnedConversation.Contact.Builder contactBuilder = AccountRecord.PinnedConversation.Contact.newBuilder();
 
-        contactBuilder.setUuid(contact.get().getAci().toString());
+        contactBuilder.setUuid(contact.get().getServiceId().toString());
 
         if (contact.get().getNumber().isPresent()) {
           contactBuilder.setE164(contact.get().getNumber().get());
