@@ -9,13 +9,14 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.LinearSmoothScroller
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.SmoothScroller
+import com.bumptech.glide.Glide
 import com.google.android.material.appbar.AppBarLayout
+import org.signal.libsignal.protocol.util.Pair
 import org.thoughtcrime.securesms.LoggingFragment
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.database.DatabaseObserver
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
 import org.thoughtcrime.securesms.keyboard.emoji.KeyboardPageSearchView
-import org.thoughtcrime.securesms.mms.GlideApp
 import org.thoughtcrime.securesms.stickers.StickerEventListener
 import org.thoughtcrime.securesms.stickers.StickerRolloverTouchListener
 import org.thoughtcrime.securesms.stickers.StickerRolloverTouchListener.RolloverStickerRetriever
@@ -26,12 +27,11 @@ import org.thoughtcrime.securesms.util.adapter.mapping.MappingModel
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingModelList
 import org.thoughtcrime.securesms.util.fragments.findListener
 import org.thoughtcrime.securesms.util.fragments.requireListener
-import org.whispersystems.libsignal.util.Pair
 import java.util.Optional
 import kotlin.math.abs
 import kotlin.math.max
 
-class StickerKeyboardPageFragment :
+open class StickerKeyboardPageFragment :
   LoggingFragment(R.layout.keyboard_pager_sticker_page_fragment),
   KeyboardStickerListAdapter.EventListener,
   StickerRolloverTouchListener.RolloverEventListener,
@@ -39,9 +39,9 @@ class StickerKeyboardPageFragment :
   DatabaseObserver.Observer,
   View.OnLayoutChangeListener {
 
-  private lateinit var stickerList: RecyclerView
-  private lateinit var stickerListAdapter: KeyboardStickerListAdapter
-  private lateinit var layoutManager: GridLayoutManager
+  protected lateinit var stickerList: RecyclerView
+  protected lateinit var stickerListAdapter: KeyboardStickerListAdapter
+  protected lateinit var layoutManager: GridLayoutManager
   private lateinit var listTouchListener: StickerRolloverTouchListener
   private lateinit var stickerPacksRecycler: RecyclerView
   private lateinit var appBarLayout: AppBarLayout
@@ -57,20 +57,20 @@ class StickerKeyboardPageFragment :
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
-    val glideRequests = GlideApp.with(this)
-    stickerListAdapter = KeyboardStickerListAdapter(glideRequests, this, DeviceProperties.shouldAllowApngStickerAnimation(requireContext()))
+    val requestManager = Glide.with(this)
+    stickerListAdapter = KeyboardStickerListAdapter(requestManager, this, DeviceProperties.shouldAllowApngStickerAnimation(requireContext()))
     layoutManager = GridLayoutManager(requireContext(), 2).apply {
       spanSizeLookup = object : GridLayoutManager.SpanSizeLookup() {
         override fun getSpanSize(position: Int): Int {
           val model: Optional<MappingModel<*>> = stickerListAdapter.getModel(position)
-          if (model.isPresent && model.get() is KeyboardStickerListAdapter.StickerHeader) {
+          if (model.isPresent && model.get() is KeyboardStickerListAdapter.Header) {
             return spanCount
           }
           return 1
         }
       }
     }
-    listTouchListener = StickerRolloverTouchListener(requireContext(), glideRequests, this, this)
+    listTouchListener = StickerRolloverTouchListener(requireContext(), requestManager, this, this)
 
     stickerList = view.findViewById(R.id.sticker_keyboard_list)
     stickerList.layoutManager = layoutManager
@@ -81,7 +81,7 @@ class StickerKeyboardPageFragment :
 
     stickerPacksRecycler = view.findViewById(R.id.sticker_packs_recycler)
 
-    stickerPacksAdapter = KeyboardStickerPackListAdapter(glideRequests, DeviceProperties.shouldAllowApngStickerAnimation(requireContext()), this::onTabSelected)
+    stickerPacksAdapter = KeyboardStickerPackListAdapter(requestManager, DeviceProperties.shouldAllowApngStickerAnimation(requireContext()), this::onTabSelected)
     stickerPacksRecycler.adapter = stickerPacksAdapter
 
     appBarLayout = view.findViewById(R.id.sticker_keyboard_search_appbar)
@@ -114,7 +114,7 @@ class StickerKeyboardPageFragment :
   override fun onActivityCreated(savedInstanceState: Bundle?) {
     super.onActivityCreated(savedInstanceState)
 
-    viewModel = ViewModelProvider(requireActivity(), StickerKeyboardPageViewModel.Factory(requireContext()))
+    viewModel = ViewModelProvider(requireActivity(), StickerKeyboardPageViewModel.Factory())
       .get(StickerKeyboardPageViewModel::class.java)
 
     viewModel.stickers.observe(viewLifecycleOwner, this::updateStickerList)
@@ -124,13 +124,17 @@ class StickerKeyboardPageFragment :
     viewModel.refreshStickers()
   }
 
-  private fun updateStickerList(stickers: MappingModelList) {
+  open fun updateStickerList(stickers: MappingModelList) {
     if (firstLoad) {
-      stickerListAdapter.submitList(stickers) { layoutManager.scrollToPositionWithOffset(1, 0) }
+      stickerListAdapter.submitList(stickers, this::scrollOnLoad)
       firstLoad = false
     } else {
       stickerListAdapter.submitList(stickers)
     }
+  }
+
+  open fun scrollOnLoad() {
+    layoutManager.scrollToPositionWithOffset(1, 0)
   }
 
   private fun onTabSelected(stickerPack: KeyboardStickerPackListAdapter.StickerPack) {

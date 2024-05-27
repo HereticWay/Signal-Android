@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout
         xmlns:android="http://schemas.android.com/apk/res/android"
+    tools:viewBindingIgnore="true"
         xmlns:app="http://schemas.android.com/apk/res-auto"
         xmlns:tools="http://schemas.android.com/tools"
         android:id="@+id/container"
@@ -16,7 +17,7 @@
                android:layout_height="wrap_content"
                android:layout_marginStart="16dp"
                android:layout_gravity="center_vertical"
-               android:src="@drawable/ic_alert"
+               android:src="@drawable/ic_warning_40"
                app:tint="@color/signal_icon_tint_primary"/>
 
     <TextView android:id="@+id/unverified_text"
@@ -37,8 +38,8 @@
             android:focusable="true"
             android:nextFocusLeft="@+id/container"
             android:nextFocusRight="@+id/container"
-            android:src="@drawable/ic_close_white_24dp"
-            android:tint="@color/signal_icon_tint_primary"
+            android:src="@drawable/ic_x_24"
+            app:tint="@color/signal_icon_tint_primary"
             android:contentDescription="@string/InviteActivity_cancel"/>
 
 </LinearLayout>

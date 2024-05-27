@@ -1,34 +1,33 @@
 package org.thoughtcrime.securesms.stories.tabs
 
-import io.reactivex.rxjava3.core.Observable
-import io.reactivex.rxjava3.schedulers.Schedulers
-import org.thoughtcrime.securesms.database.DatabaseObserver
+import io.reactivex.rxjava3.core.Flowable
+import org.thoughtcrime.securesms.database.RxDatabaseObserver
 import org.thoughtcrime.securesms.database.SignalDatabase
-import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
+import org.thoughtcrime.securesms.recipients.Recipient
 
 class ConversationListTabRepository {
 
-  fun getNumberOfUnreadConversations(): Observable<Long> {
-    return Observable.create<Long> {
-      val listener = DatabaseObserver.Observer {
-        it.onNext(SignalDatabase.threads.unreadThreadCount)
-      }
-
-      ApplicationDependencies.getDatabaseObserver().registerConversationListObserver(listener)
-      it.setCancellable { ApplicationDependencies.getDatabaseObserver().unregisterObserver(listener) }
-      it.onNext(SignalDatabase.threads.unreadThreadCount)
-    }.subscribeOn(Schedulers.io())
+  fun getNumberOfUnreadMessages(): Flowable<Long> {
+    return RxDatabaseObserver.conversationList.map { SignalDatabase.threads.getUnreadMessageCount() }
   }
 
-  fun getNumberOfUnseenStories(): Observable<Long> {
-    return Observable.create<Long> {
-      val listener = DatabaseObserver.Observer {
-        it.onNext(SignalDatabase.mms.unreadStoryCount)
-      }
+  fun getNumberOfUnseenStories(): Flowable<Long> {
+    return RxDatabaseObserver.conversationList.map {
+      SignalDatabase
+        .messages
+        .getUnreadStoryThreadRecipientIds()
+        .map { Recipient.resolved(it) }
+        .filterNot { it.shouldHideStory }
+        .size
+        .toLong()
+    }
+  }
 
-      ApplicationDependencies.getDatabaseObserver().registerConversationListObserver(listener)
-      it.setCancellable { ApplicationDependencies.getDatabaseObserver().unregisterObserver(listener) }
-      it.onNext(SignalDatabase.mms.unreadStoryCount)
-    }.subscribeOn(Schedulers.io())
+  fun getHasFailedOutgoingStories(): Flowable<Boolean> {
+    return RxDatabaseObserver.conversationList.map { SignalDatabase.messages.hasFailedOutgoingStory() }
+  }
+
+  fun getNumberOfUnseenCalls(): Flowable<Long> {
+    return RxDatabaseObserver.conversationList.map { SignalDatabase.calls.getUnreadMissedCallCount() }
   }
 }

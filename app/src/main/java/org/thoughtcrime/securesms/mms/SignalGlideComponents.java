@@ -2,6 +2,7 @@ package org.thoughtcrime.securesms.mms;
 
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 
 import androidx.annotation.NonNull;
@@ -10,6 +11,7 @@ import com.bumptech.glide.Glide;
 import com.bumptech.glide.Registry;
 import com.bumptech.glide.load.model.GlideUrl;
 import com.bumptech.glide.load.model.UnitModelLoader;
+import com.bumptech.glide.load.resource.bitmap.BitmapDrawableEncoder;
 import com.bumptech.glide.load.resource.bitmap.Downsampler;
 import com.bumptech.glide.load.resource.bitmap.StreamBitmapDecoder;
 import com.bumptech.glide.load.resource.gif.ByteBufferGifDecoder;
@@ -28,6 +30,7 @@ import org.thoughtcrime.securesms.giph.model.ChunkedImageUrl;
 import org.thoughtcrime.securesms.glide.BadgeLoader;
 import org.thoughtcrime.securesms.glide.ChunkedImageUrlLoader;
 import org.thoughtcrime.securesms.glide.ContactPhotoLoader;
+import org.thoughtcrime.securesms.glide.GiftBadgeModel;
 import org.thoughtcrime.securesms.glide.OkHttpUrlLoader;
 import org.thoughtcrime.securesms.glide.cache.ApngBufferCacheDecoder;
 import org.thoughtcrime.securesms.glide.cache.ApngFrameDrawableTranscoder;
@@ -37,10 +40,12 @@ import org.thoughtcrime.securesms.glide.cache.EncryptedBitmapResourceEncoder;
 import org.thoughtcrime.securesms.glide.cache.EncryptedCacheDecoder;
 import org.thoughtcrime.securesms.glide.cache.EncryptedCacheEncoder;
 import org.thoughtcrime.securesms.glide.cache.EncryptedGifDrawableResourceEncoder;
+import org.thoughtcrime.securesms.glide.cache.WebpSanDecoder;
 import org.thoughtcrime.securesms.mms.AttachmentStreamUriLoader.AttachmentModel;
 import org.thoughtcrime.securesms.mms.DecryptableStreamUriLoader.DecryptableUri;
 import org.thoughtcrime.securesms.stickers.StickerRemoteUri;
 import org.thoughtcrime.securesms.stickers.StickerRemoteUriLoader;
+import org.thoughtcrime.securesms.stories.StoryTextPostModel;
 import org.thoughtcrime.securesms.util.ConversationShortcutPhoto;
 
 import java.io.File;
@@ -60,13 +65,20 @@ public class SignalGlideComponents implements RegisterGlideComponents {
 
     registry.prepend(File.class, File.class, UnitModelLoader.Factory.getInstance());
 
+    registry.prepend(InputStream.class, Bitmap.class, new WebpSanDecoder());
+
     registry.prepend(InputStream.class, new EncryptedCacheEncoder(secret, glide.getArrayPool()));
 
-    registry.prepend(Bitmap.class, new EncryptedBitmapResourceEncoder(secret));
     registry.prepend(File.class, Bitmap.class, new EncryptedCacheDecoder<>(secret, new StreamBitmapDecoder(new Downsampler(registry.getImageHeaderParsers(), context.getResources().getDisplayMetrics(), glide.getBitmapPool(), glide.getArrayPool()), glide.getArrayPool())));
 
+    StreamGifDecoder streamGifDecoder = new StreamGifDecoder(registry.getImageHeaderParsers(), new ByteBufferGifDecoder(context, registry.getImageHeaderParsers(), glide.getBitmapPool(), glide.getArrayPool()), glide.getArrayPool());
+    registry.prepend(InputStream.class, GifDrawable.class, streamGifDecoder);
     registry.prepend(GifDrawable.class, new EncryptedGifDrawableResourceEncoder(secret));
-    registry.prepend(File.class, GifDrawable.class, new EncryptedCacheDecoder<>(secret, new StreamGifDecoder(registry.getImageHeaderParsers(), new ByteBufferGifDecoder(context, registry.getImageHeaderParsers(), glide.getBitmapPool(), glide.getArrayPool()), glide.getArrayPool())));
+    registry.prepend(File.class, GifDrawable.class, new EncryptedCacheDecoder<>(secret, streamGifDecoder));
+
+    EncryptedBitmapResourceEncoder encryptedBitmapResourceEncoder = new EncryptedBitmapResourceEncoder(secret);
+    registry.prepend(Bitmap.class, new EncryptedBitmapResourceEncoder(secret));
+    registry.prepend(BitmapDrawable.class, new BitmapDrawableEncoder(glide.getBitmapPool(), encryptedBitmapResourceEncoder));
 
     ApngBufferCacheDecoder apngBufferCacheDecoder = new ApngBufferCacheDecoder();
     ApngStreamCacheDecoder apngStreamCacheDecoder = new ApngStreamCacheDecoder(apngBufferCacheDecoder);
@@ -78,7 +90,9 @@ public class SignalGlideComponents implements RegisterGlideComponents {
     registry.register(APNGDecoder.class, Drawable.class, new ApngFrameDrawableTranscoder());
 
     registry.prepend(BlurHash.class, Bitmap.class, new BlurHashResourceDecoder());
+    registry.prepend(StoryTextPostModel.class, Bitmap.class, new StoryTextPostModel.Decoder());
 
+    registry.append(StoryTextPostModel.class, StoryTextPostModel.class, UnitModelLoader.Factory.getInstance());
     registry.append(ConversationShortcutPhoto.class, Bitmap.class, new ConversationShortcutPhoto.Loader.Factory(context));
     registry.append(ContactPhoto.class, InputStream.class, new ContactPhotoLoader.Factory(context));
     registry.append(DecryptableUri.class, InputStream.class, new DecryptableStreamUriLoader.Factory(context));
@@ -87,6 +101,7 @@ public class SignalGlideComponents implements RegisterGlideComponents {
     registry.append(StickerRemoteUri.class, InputStream.class, new StickerRemoteUriLoader.Factory());
     registry.append(BlurHash.class, BlurHash.class, new BlurHashModelLoader.Factory());
     registry.append(Badge.class, InputStream.class, BadgeLoader.createFactory());
+    registry.append(GiftBadgeModel.class, InputStream.class, GiftBadgeModel.createFactory());
     registry.replace(GlideUrl.class, InputStream.class, new OkHttpUrlLoader.Factory());
   }
 }

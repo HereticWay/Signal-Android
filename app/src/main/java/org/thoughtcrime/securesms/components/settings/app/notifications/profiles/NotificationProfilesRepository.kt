@@ -1,6 +1,7 @@
 package org.thoughtcrime.securesms.components.settings.app.notifications.profiles
 
 import io.reactivex.rxjava3.core.Completable
+import io.reactivex.rxjava3.core.Flowable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.core.ObservableEmitter
 import io.reactivex.rxjava3.core.Single
@@ -8,6 +9,7 @@ import io.reactivex.rxjava3.schedulers.Schedulers
 import org.thoughtcrime.securesms.conversation.colors.AvatarColor
 import org.thoughtcrime.securesms.database.DatabaseObserver
 import org.thoughtcrime.securesms.database.NotificationProfileDatabase
+import org.thoughtcrime.securesms.database.RxDatabaseObserver
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
 import org.thoughtcrime.securesms.keyvalue.SignalStore
@@ -24,16 +26,11 @@ import org.thoughtcrime.securesms.util.toMillis
 class NotificationProfilesRepository {
   private val database: NotificationProfileDatabase = SignalDatabase.notificationProfiles
 
-  fun getProfiles(): Observable<List<NotificationProfile>> {
-    return Observable.create { emitter: ObservableEmitter<List<NotificationProfile>> ->
-      val databaseObserver: DatabaseObserver = ApplicationDependencies.getDatabaseObserver()
-      val profileObserver = DatabaseObserver.Observer { emitter.onNext(database.getProfiles()) }
-
-      databaseObserver.registerNotificationProfileObserver(profileObserver)
-
-      emitter.setCancellable { databaseObserver.unregisterObserver(profileObserver) }
-      emitter.onNext(database.getProfiles())
-    }.subscribeOn(Schedulers.io())
+  fun getProfiles(): Flowable<List<NotificationProfile>> {
+    return RxDatabaseObserver
+      .notificationProfiles
+      .map { database.getProfiles() }
+      .subscribeOn(Schedulers.io())
   }
 
   fun getProfile(profileId: Long): Observable<NotificationProfile> {
@@ -95,6 +92,22 @@ class NotificationProfilesRepository {
   fun updateSchedule(schedule: NotificationProfileSchedule): Completable {
     return Completable.fromCallable { database.updateSchedule(schedule) }
       .subscribeOn(Schedulers.io())
+  }
+
+  fun toggleAllowAllMentions(profileId: Long): Single<NotificationProfile> {
+    return getProfile(profileId)
+      .take(1)
+      .singleOrError()
+      .flatMap { updateProfile(it.copy(allowAllMentions = !it.allowAllMentions)) }
+      .map { (it as NotificationProfileDatabase.NotificationProfileChangeResult.Success).notificationProfile }
+  }
+
+  fun toggleAllowAllCalls(profileId: Long): Single<NotificationProfile> {
+    return getProfile(profileId)
+      .take(1)
+      .singleOrError()
+      .flatMap { updateProfile(it.copy(allowAllCalls = !it.allowAllCalls)) }
+      .map { (it as NotificationProfileDatabase.NotificationProfileChangeResult.Success).notificationProfile }
   }
 
   fun manuallyToggleProfile(profile: NotificationProfile, now: Long = System.currentTimeMillis()): Completable {

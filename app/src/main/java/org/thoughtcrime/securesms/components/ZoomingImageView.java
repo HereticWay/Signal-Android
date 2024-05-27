@@ -4,12 +4,14 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.net.Uri;
 import android.util.AttributeSet;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.exifinterface.media.ExifInterface;
 
+import com.bumptech.glide.RequestManager;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 import com.bumptech.glide.request.target.Target;
 import com.davemorrissey.labs.subscaleview.ImageSource;
@@ -22,13 +24,13 @@ import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.components.subsampling.AttachmentBitmapDecoder;
 import org.thoughtcrime.securesms.components.subsampling.AttachmentRegionDecoder;
 import org.thoughtcrime.securesms.mms.DecryptableStreamUriLoader.DecryptableUri;
-import org.thoughtcrime.securesms.mms.GlideRequests;
 import org.thoughtcrime.securesms.mms.PartAuthority;
+import org.thoughtcrime.securesms.util.ActionRequestListener;
 import org.thoughtcrime.securesms.util.BitmapDecodingException;
 import org.thoughtcrime.securesms.util.BitmapUtil;
 import org.thoughtcrime.securesms.util.MediaUtil;
 import org.thoughtcrime.securesms.util.ViewUtil;
-import org.thoughtcrime.securesms.util.concurrent.SimpleTask;
+import org.signal.core.util.concurrent.SimpleTask;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -79,7 +81,7 @@ public class ZoomingImageView extends FrameLayout {
   }
 
   @SuppressLint("StaticFieldLeak")
-  public void setImageUri(@NonNull GlideRequests glideRequests, @NonNull Uri uri, @NonNull String contentType)
+  public void setImageUri(@NonNull RequestManager requestManager, @NonNull Uri uri, @NonNull String contentType, @NonNull Runnable onMediaReady)
   {
     final Context context        = getContext();
     final int     maxTextureSize = BitmapUtil.getMaxTextureSize();
@@ -101,22 +103,24 @@ public class ZoomingImageView extends FrameLayout {
 
       if (dimensions == null || (dimensions.first <= maxTextureSize && dimensions.second <= maxTextureSize)) {
         Log.i(TAG, "Loading in standard image view...");
-        setImageViewUri(glideRequests, uri);
+        setImageViewUri(requestManager, uri, onMediaReady);
       } else {
         Log.i(TAG, "Loading in subsampling image view...");
         setSubsamplingImageViewUri(uri);
+        onMediaReady.run();
       }
     });
   }
 
-  private void setImageViewUri(@NonNull GlideRequests glideRequests, @NonNull Uri uri) {
+  private void setImageViewUri(@NonNull RequestManager requestManager, @NonNull Uri uri, @NonNull Runnable onMediaReady) {
     photoView.setVisibility(View.VISIBLE);
     subsamplingImageView.setVisibility(View.GONE);
 
-    glideRequests.load(new DecryptableUri(uri))
+    requestManager.load(new DecryptableUri(uri))
                  .diskCacheStrategy(DiskCacheStrategy.NONE)
                  .dontTransform()
                  .override(Target.SIZE_ORIGINAL, Target.SIZE_ORIGINAL)
+                 .addListener(ActionRequestListener.onEither(onMediaReady))
                  .into(photoView);
   }
 
@@ -167,5 +171,11 @@ public class ZoomingImageView extends FrameLayout {
     public AttachmentRegionDecoder make() throws IllegalAccessException, InstantiationException {
       return new AttachmentRegionDecoder();
     }
+  }
+
+  @Override
+  public boolean onInterceptTouchEvent(MotionEvent event) {
+    getParent().requestDisallowInterceptTouchEvent(event.getPointerCount() > 1);
+    return false;
   }
 }

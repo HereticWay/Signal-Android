@@ -1,15 +1,16 @@
 package org.thoughtcrime.securesms.registration.secondary
 
-import org.signal.zkgroup.profiles.ProfileKey
+import org.signal.libsignal.protocol.IdentityKey
+import org.signal.libsignal.protocol.IdentityKeyPair
+import org.signal.libsignal.protocol.ecc.Curve
+import org.signal.libsignal.protocol.ecc.ECPublicKey
+import org.signal.libsignal.protocol.kdf.HKDF
+import org.signal.libsignal.zkgroup.profiles.ProfileKey
 import org.thoughtcrime.securesms.crypto.IdentityKeyUtil
-import org.whispersystems.libsignal.IdentityKey
-import org.whispersystems.libsignal.IdentityKeyPair
-import org.whispersystems.libsignal.ecc.Curve
-import org.whispersystems.libsignal.ecc.ECPublicKey
-import org.whispersystems.libsignal.kdf.HKDF
 import org.whispersystems.signalservice.api.util.UuidUtil
 import org.whispersystems.signalservice.internal.crypto.PrimaryProvisioningCipher
-import org.whispersystems.signalservice.internal.push.ProvisioningProtos
+import org.whispersystems.signalservice.internal.push.ProvisionEnvelope
+import org.whispersystems.signalservice.internal.push.ProvisionMessage
 import java.security.InvalidKeyException
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
@@ -26,9 +27,9 @@ class SecondaryProvisioningCipher private constructor(private val secondaryIdent
 
   val secondaryDevicePublicKey: IdentityKey = secondaryIdentityKeyPair.publicKey
 
-  fun decrypt(envelope: ProvisioningProtos.ProvisionEnvelope): ProvisionDecryptResult {
-    val primaryEphemeralPublicKey = envelope.publicKey.toByteArray()
-    val body = envelope.body.toByteArray()
+  fun decrypt(envelope: ProvisionEnvelope): ProvisionDecryptResult {
+    val primaryEphemeralPublicKey = envelope.publicKey!!.toByteArray()
+    val body = envelope.body!!.toByteArray()
 
     val provisionMessageLength = body.size - VERSION_LENGTH - IV_LENGTH - MAC_LENGTH
 
@@ -64,17 +65,17 @@ class SecondaryProvisioningCipher private constructor(private val secondaryIdent
       return ProvisionDecryptResult.Error
     }
 
-    val provisioningMessage = ProvisioningProtos.ProvisionMessage.parseFrom(plaintext)
+    val provisioningMessage = ProvisionMessage.ADAPTER.decode(plaintext)
 
     return ProvisionDecryptResult.Success(
       uuid = UuidUtil.parseOrThrow(provisioningMessage.aci),
-      e164 = provisioningMessage.number,
-      identityKeyPair = IdentityKeyPair(IdentityKey(provisioningMessage.aciIdentityKeyPublic.toByteArray()), Curve.decodePrivatePoint(provisioningMessage.aciIdentityKeyPrivate.toByteArray())),
-      profileKey = ProfileKey(provisioningMessage.profileKey.toByteArray()),
-      areReadReceiptsEnabled = provisioningMessage.readReceipts,
+      e164 = provisioningMessage.number!!,
+      identityKeyPair = IdentityKeyPair(IdentityKey(provisioningMessage.aciIdentityKeyPublic!!.toByteArray()), Curve.decodePrivatePoint(provisioningMessage.aciIdentityKeyPrivate!!.toByteArray())),
+      profileKey = ProfileKey(provisioningMessage.profileKey!!.toByteArray()),
+      areReadReceiptsEnabled = provisioningMessage.readReceipts == true,
       primaryUserAgent = provisioningMessage.userAgent,
-      provisioningCode = provisioningMessage.provisioningCode,
-      provisioningVersion = provisioningMessage.provisioningVersion
+      provisioningCode = provisioningMessage.provisioningCode!!,
+      provisioningVersion = provisioningMessage.provisioningVersion!!
     )
   }
 

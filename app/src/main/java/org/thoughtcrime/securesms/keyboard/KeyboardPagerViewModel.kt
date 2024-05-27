@@ -4,10 +4,10 @@ import androidx.annotation.MainThread
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import org.signal.core.util.ThreadUtil
-import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.stickers.StickerSearchRepository
 import org.thoughtcrime.securesms.util.DefaultValueLiveData
+import org.thoughtcrime.securesms.util.FeatureFlags
 
 class KeyboardPagerViewModel : ViewModel() {
 
@@ -19,10 +19,15 @@ class KeyboardPagerViewModel : ViewModel() {
     if (SignalStore.settings().isPreferSystemEmoji) {
       startingPages.remove(KeyboardPage.EMOJI)
     }
+
+    if (!FeatureFlags.gifSearchAvailable()) {
+      startingPages.remove(KeyboardPage.GIF)
+    }
+
     pages = DefaultValueLiveData(startingPages)
     page = DefaultValueLiveData(startingPages.first())
 
-    StickerSearchRepository(ApplicationDependencies.getApplication()).getStickerFeatureAvailability { available ->
+    StickerSearchRepository().getStickerFeatureAvailability { available ->
       if (!available) {
         val updatedPages = pages.value.toMutableSet().apply { remove(KeyboardPage.STICKER) }
         pages.postValue(updatedPages)
@@ -36,6 +41,10 @@ class KeyboardPagerViewModel : ViewModel() {
 
   fun page(): LiveData<KeyboardPage> = page
   fun pages(): LiveData<Set<KeyboardPage>> = pages
+
+  fun setPages(pageOverride: Set<KeyboardPage>) {
+    pages.value = pageOverride
+  }
 
   @MainThread
   fun setOnlyPage(page: KeyboardPage) {

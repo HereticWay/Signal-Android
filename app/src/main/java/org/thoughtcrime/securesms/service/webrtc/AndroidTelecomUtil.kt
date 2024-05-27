@@ -19,7 +19,9 @@ import androidx.core.content.ContextCompat
 import androidx.core.os.bundleOf
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.util.FeatureFlags
 import org.thoughtcrime.securesms.webrtc.audio.SignalAudioManager
 
 /**
@@ -39,7 +41,7 @@ object AndroidTelecomUtil {
   @JvmStatic
   val telecomSupported: Boolean
     get() {
-      if (Build.VERSION.SDK_INT >= 26 && !systemRejected) {
+      if (Build.VERSION.SDK_INT >= 26 && !systemRejected && isTelecomAllowedForDevice()) {
         if (!accountRegistered) {
           registerPhoneAccount()
         }
@@ -89,6 +91,7 @@ object AndroidTelecomUtil {
         TelecomManager.EXTRA_INCOMING_CALL_EXTRAS to bundleOf(
           AndroidCallConnectionService.KEY_RECIPIENT_ID to recipientId.serialize(),
           AndroidCallConnectionService.KEY_CALL_ID to callId,
+          AndroidCallConnectionService.KEY_VIDEO_CALL to remoteVideoOffer,
           TelecomManager.EXTRA_INCOMING_VIDEO_STATE to if (remoteVideoOffer) VideoProfile.STATE_BIDIRECTIONAL else VideoProfile.STATE_AUDIO_ONLY
         ),
         TelecomManager.EXTRA_INCOMING_VIDEO_STATE to if (remoteVideoOffer) VideoProfile.STATE_BIDIRECTIONAL else VideoProfile.STATE_AUDIO_ONLY
@@ -141,8 +144,9 @@ object AndroidTelecomUtil {
         TelecomManager.EXTRA_START_CALL_WITH_VIDEO_STATE to if (isVideoCall) VideoProfile.STATE_BIDIRECTIONAL else VideoProfile.STATE_AUDIO_ONLY,
         TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS to bundleOf(
           AndroidCallConnectionService.KEY_RECIPIENT_ID to recipientId.serialize(),
-          AndroidCallConnectionService.KEY_CALL_ID to callId
-        ),
+          AndroidCallConnectionService.KEY_CALL_ID to callId,
+          AndroidCallConnectionService.KEY_VIDEO_CALL to isVideoCall
+        )
       )
 
       try {
@@ -161,7 +165,7 @@ object AndroidTelecomUtil {
     if (telecomSupported) {
       val connection: AndroidCallConnection? = connections[recipientId]
       Log.i(TAG, "Selecting audio route: $device connection: ${connection != null}")
-      if (connection != null) {
+      if (connection?.callAudioState != null) {
         when (device) {
           SignalAudioManager.AudioDevice.SPEAKER_PHONE -> connection.setAudioRouteIfDifferent(CallAudioState.ROUTE_SPEAKER)
           SignalAudioManager.AudioDevice.BLUETOOTH -> connection.setAudioRouteIfDifferent(CallAudioState.ROUTE_BLUETOOTH)
@@ -185,6 +189,13 @@ object AndroidTelecomUtil {
       }
     }
     return SignalAudioManager.AudioDevice.NONE
+  }
+
+  private fun isTelecomAllowedForDevice(): Boolean {
+    if (FeatureFlags.internalUser()) {
+      return !SignalStore.internalValues().callingDisableTelecom()
+    }
+    return RingRtcDynamicConfiguration.isTelecomAllowedForDevice()
   }
 }
 

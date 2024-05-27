@@ -11,13 +11,16 @@ import java.io.IOException
  * A class to help initialize Spinner, our database debugging interface.
  */
 object Spinner {
-  val TAG: String = Log.tag(Spinner::class.java)
+  internal const val KEY_PREFIX = "spinner"
+  const val KEY_ENVIRONMENT = "$KEY_PREFIX:environment"
+
+  private val TAG: String = Log.tag(Spinner::class.java)
 
   private lateinit var server: SpinnerServer
 
-  fun init(application: Application, deviceInfo: DeviceInfo, databases: Map<String, DatabaseConfig>) {
+  fun init(application: Application, deviceInfo: Map<String, () -> String>, databases: Map<String, DatabaseConfig>, plugins: Map<String, Plugin>) {
     try {
-      server = SpinnerServer(application, deviceInfo, databases)
+      server = SpinnerServer(application, deviceInfo, databases, plugins)
       server.start()
     } catch (e: IOException) {
       Log.w(TAG, "Spinner server hit IO exception!", e)
@@ -65,6 +68,10 @@ object Spinner {
     server.onSql(dbName, queryString)
   }
 
+  internal fun log(item: SpinnerLogItem) {
+    server.onLog(item)
+  }
+
   private fun replaceQueryArgs(query: String, args: Array<Any>?): String {
     if (args == null) {
       return query
@@ -87,14 +94,8 @@ object Spinner {
     return builder.toString()
   }
 
-  data class DeviceInfo(
-    val name: String,
-    val packageName: String,
-    val appVersion: String
-  )
-
   data class DatabaseConfig(
-    val db: SupportSQLiteDatabase,
+    val db: () -> SupportSQLiteDatabase,
     val columnTransformers: List<ColumnTransformer> = emptyList()
   )
 }

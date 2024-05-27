@@ -10,8 +10,6 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.ContextCompat;
-import androidx.core.content.res.TypedArrayUtils;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
@@ -23,7 +21,6 @@ import org.thoughtcrime.securesms.components.InputAwareLayout.InputView;
 import org.thoughtcrime.securesms.keyboard.KeyboardPage;
 import org.thoughtcrime.securesms.keyboard.KeyboardPagerFragment;
 import org.thoughtcrime.securesms.keyboard.emoji.search.EmojiSearchFragment;
-import org.thoughtcrime.securesms.util.ThemeUtil;
 import org.thoughtcrime.securesms.util.ThemedFragment;
 
 public class MediaKeyboard extends FrameLayout implements InputView {
@@ -50,6 +47,26 @@ public class MediaKeyboard extends FrameLayout implements InputView {
       TypedArray array = context.obtainStyledAttributes(attrs, R.styleable.MediaKeyboard);
       mediaKeyboardTheme = array.getResourceId(R.styleable.MediaKeyboard_media_keyboard_theme, -1);
       array.recycle();
+    }
+  }
+
+  @Override
+  protected void onAttachedToWindow() {
+    super.onAttachedToWindow();
+    if (isInitialised && fragmentManager != null && keyboardPagerFragment != null) {
+      fragmentManager.beginTransaction()
+                     .replace(R.id.media_keyboard_fragment_container, keyboardPagerFragment, TAG)
+                     .commitNowAllowingStateLoss();
+    }
+  }
+
+  @Override
+  protected void onDetachedFromWindow() {
+    super.onDetachedFromWindow();
+    if (fragmentManager != null && keyboardPagerFragment != null) {
+      fragmentManager.beginTransaction()
+                     .remove(keyboardPagerFragment)
+                     .commitNowAllowingStateLoss();
     }
   }
 
@@ -88,7 +105,6 @@ public class MediaKeyboard extends FrameLayout implements InputView {
     if (!isInitialised) initView();
 
     setVisibility(VISIBLE);
-    if (keyboardListener != null) keyboardListener.onShown();
     keyboardPagerFragment.show();
   }
 
@@ -96,7 +112,6 @@ public class MediaKeyboard extends FrameLayout implements InputView {
   public void hide(boolean immediate) {
     setVisibility(GONE);
     onCloseEmojiSearchInternal(false);
-    if (keyboardListener != null) keyboardListener.onHidden();
     Log.i(TAG, "hide()");
     keyboardPagerFragment.hide();
   }
@@ -149,8 +164,13 @@ public class MediaKeyboard extends FrameLayout implements InputView {
                    .commitAllowingStateLoss();
   }
 
+  public boolean isEmojiSearchMode() {
+    return keyboardState == State.EMOJI_SEARCH;
+  }
+
   private void initView() {
     if (!isInitialised) {
+      Log.d(TAG, "Initialising...");
 
       LayoutInflater.from(getContext()).inflate(R.layout.media_keyboard, this, true);
 
@@ -165,7 +185,7 @@ public class MediaKeyboard extends FrameLayout implements InputView {
       }
 
       fragmentManager.beginTransaction()
-                     .replace(R.id.media_keyboard_fragment_container, keyboardPagerFragment)
+                     .replace(R.id.media_keyboard_fragment_container, keyboardPagerFragment, TAG)
                      .commitNowAllowingStateLoss();
 
       keyboardState         = State.NORMAL;

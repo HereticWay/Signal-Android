@@ -44,11 +44,13 @@ public class BeginCallActionProcessorDelegate extends WebRtcActionProcessor {
                                                                             remotePeer.getRecipient(),
                                                                             null,
                                                                             new BroadcastVideoSink(currentState.getVideoState().getLockableEglBase(),
-                                                                                                   false,
+                                                                                                   true,
                                                                                                    true,
                                                                                                    currentState.getLocalDeviceState().getOrientation().getDegrees()),
                                                                             true,
+                                                                            true,
                                                                             false,
+                                                                            CallParticipant.HAND_LOWERED,
                                                                             0,
                                                                             true,
                                                                             0,
@@ -74,7 +76,10 @@ public class BeginCallActionProcessorDelegate extends WebRtcActionProcessor {
 
     Log.i(tag, "assign activePeer callId: " + remotePeer.getCallId() + " key: " + remotePeer.hashCode());
 
-    webRtcInteractor.setCallInProgressNotification(TYPE_INCOMING_CONNECTING, remotePeer);
+
+    boolean    isRemoteVideoOffer = currentState.getCallSetupState(remotePeer).isRemoteVideoOffer();
+
+    webRtcInteractor.setCallInProgressNotification(TYPE_INCOMING_CONNECTING, remotePeer, isRemoteVideoOffer);
     webRtcInteractor.retrieveTurnServers(remotePeer);
     webRtcInteractor.initializeAudioForCall();
 
@@ -98,11 +103,13 @@ public class BeginCallActionProcessorDelegate extends WebRtcActionProcessor {
                                                                     remotePeer.getRecipient(),
                                                                     null,
                                                                     new BroadcastVideoSink(currentState.getVideoState().getLockableEglBase(),
-                                                                                           false,
+                                                                                           true,
                                                                                            true,
                                                                                            currentState.getLocalDeviceState().getOrientation().getDegrees()),
                                                                     true,
+                                                                    true,
                                                                     false,
+                                                                    CallParticipant.HAND_LOWERED,
                                                                     0,
                                                                     true,
                                                                     0,

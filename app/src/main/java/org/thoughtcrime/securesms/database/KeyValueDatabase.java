@@ -16,9 +16,8 @@ import org.thoughtcrime.securesms.crypto.DatabaseSecret;
 import org.thoughtcrime.securesms.crypto.DatabaseSecretProvider;
 import org.thoughtcrime.securesms.keyvalue.KeyValueDataSet;
 import org.thoughtcrime.securesms.keyvalue.KeyValuePersistentStorage;
-import org.thoughtcrime.securesms.util.CursorUtil;
+import org.signal.core.util.CursorUtil;
 
-import java.io.File;
 import java.util.Collection;
 import java.util.Map;
 
@@ -68,7 +67,7 @@ public class KeyValueDatabase extends SQLiteOpenHelper implements SignalDatabase
 
 
   private KeyValueDatabase(@NonNull Application application, @NonNull DatabaseSecret databaseSecret) {
-    super(application, DATABASE_NAME, databaseSecret.asString(), null, DATABASE_VERSION, 0,new SqlCipherErrorHandler(DATABASE_NAME), new SqlCipherDatabaseHook());
+    super(application, DATABASE_NAME, databaseSecret.asString(), null, DATABASE_VERSION, 0,new SqlCipherErrorHandler(DATABASE_NAME), new SqlCipherDatabaseHook(), true);
 
     this.application = application;
   }
@@ -94,7 +93,6 @@ public class KeyValueDatabase extends SQLiteOpenHelper implements SignalDatabase
   public void onOpen(SQLiteDatabase db) {
     Log.i(TAG, "onOpen()");
 
-    db.enableWriteAheadLogging();
     db.setForeignKeyConstraintsEnabled(true);
 
     SignalExecutors.BOUNDED.execute(() -> {

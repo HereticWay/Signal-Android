@@ -12,7 +12,8 @@ import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.settings.DSLSettingsActivity
 import org.thoughtcrime.securesms.components.settings.app.notifications.profiles.EditNotificationProfileScheduleFragmentArgs
 import org.thoughtcrime.securesms.components.settings.app.subscription.DonationPaymentComponent
-import org.thoughtcrime.securesms.components.settings.app.subscription.DonationPaymentRepository
+import org.thoughtcrime.securesms.components.settings.app.subscription.StripeRepository
+import org.thoughtcrime.securesms.components.settings.app.subscription.donate.DonateToSignalType
 import org.thoughtcrime.securesms.help.HelpFragment
 import org.thoughtcrime.securesms.keyvalue.SettingsValues
 import org.thoughtcrime.securesms.keyvalue.SignalStore
@@ -33,7 +34,7 @@ class AppSettingsActivity : DSLSettingsActivity(), DonationPaymentComponent {
 
   private var wasConfigurationUpdated = false
 
-  override val donationPaymentRepository: DonationPaymentRepository by lazy { DonationPaymentRepository(this) }
+  override val stripeRepository: StripeRepository by lazy { StripeRepository(this) }
   override val googlePayResultPublisher: Subject<DonationPaymentComponent.GooglePayResult> = PublishSubject.create()
 
   override fun onCreate(savedInstanceState: Bundle?, ready: Boolean) {
@@ -54,16 +55,22 @@ class AppSettingsActivity : DSLSettingsActivity(), DonationPaymentComponent {
         StartLocation.PROXY -> AppSettingsFragmentDirections.actionDirectToEditProxyFragment()
         StartLocation.NOTIFICATIONS -> AppSettingsFragmentDirections.actionDirectToNotificationsSettingsFragment()
         StartLocation.CHANGE_NUMBER -> AppSettingsFragmentDirections.actionDirectToChangeNumberFragment()
-        StartLocation.SUBSCRIPTIONS -> AppSettingsFragmentDirections.actionDirectToSubscriptions()
-        StartLocation.BOOST -> AppSettingsFragmentDirections.actionAppSettingsFragmentToBoostsFragment()
+        StartLocation.SUBSCRIPTIONS -> AppSettingsFragmentDirections.actionDirectToDonateToSignal(DonateToSignalType.MONTHLY)
+        StartLocation.BOOST -> AppSettingsFragmentDirections.actionDirectToDonateToSignal(DonateToSignalType.ONE_TIME)
         StartLocation.MANAGE_SUBSCRIPTIONS -> AppSettingsFragmentDirections.actionDirectToManageDonations()
         StartLocation.NOTIFICATION_PROFILES -> AppSettingsFragmentDirections.actionDirectToNotificationProfiles()
         StartLocation.CREATE_NOTIFICATION_PROFILE -> AppSettingsFragmentDirections.actionDirectToCreateNotificationProfiles()
         StartLocation.NOTIFICATION_PROFILE_DETAILS -> AppSettingsFragmentDirections.actionDirectToNotificationProfileDetails(
           EditNotificationProfileScheduleFragmentArgs.fromBundle(intent.getBundleExtra(START_ARGUMENTS)!!).profileId
         )
+        StartLocation.PRIVACY -> AppSettingsFragmentDirections.actionDirectToPrivacy()
+        StartLocation.LINKED_DEVICES -> AppSettingsFragmentDirections.actionDirectToDevices()
+        StartLocation.USERNAME_LINK -> AppSettingsFragmentDirections.actionDirectToUsernameLinkSettings()
+        StartLocation.RECOVER_USERNAME -> AppSettingsFragmentDirections.actionDirectToUsernameRecovery()
       }
     }
+
+    intent = intent.putExtra(START_LOCATION, StartLocation.HOME)
 
     if (startingAction == null && savedInstanceState != null) {
       wasConfigurationUpdated = savedInstanceState.getBoolean(STATE_WAS_CONFIGURATION_UPDATED)
@@ -113,11 +120,10 @@ class AppSettingsActivity : DSLSettingsActivity(), DonationPaymentComponent {
   override fun onWillFinish() {
     if (wasConfigurationUpdated) {
       setResult(MainActivity.RESULT_CONFIG_CHANGED)
-    } else {
-      setResult(RESULT_OK)
     }
   }
 
+  @Suppress("DEPRECATION")
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     super.onActivityResult(requestCode, resultCode, data)
     googlePayResultPublisher.onNext(DonationPaymentComponent.GooglePayResult(requestCode, resultCode, data))
@@ -167,6 +173,9 @@ class AppSettingsActivity : DSLSettingsActivity(), DonationPaymentComponent {
     fun createNotificationProfile(context: Context): Intent = getIntentForStartLocation(context, StartLocation.CREATE_NOTIFICATION_PROFILE)
 
     @JvmStatic
+    fun privacy(context: Context): Intent = getIntentForStartLocation(context, StartLocation.PRIVACY)
+
+    @JvmStatic
     fun notificationProfileDetails(context: Context, profileId: Long): Intent {
       val arguments = EditNotificationProfileScheduleFragmentArgs.Builder(profileId, false)
         .build()
@@ -175,6 +184,15 @@ class AppSettingsActivity : DSLSettingsActivity(), DonationPaymentComponent {
       return getIntentForStartLocation(context, StartLocation.NOTIFICATION_PROFILE_DETAILS)
         .putExtra(START_ARGUMENTS, arguments)
     }
+
+    @JvmStatic
+    fun linkedDevices(context: Context): Intent = getIntentForStartLocation(context, StartLocation.LINKED_DEVICES)
+
+    @JvmStatic
+    fun usernameLinkSettings(context: Context): Intent = getIntentForStartLocation(context, StartLocation.USERNAME_LINK)
+
+    @JvmStatic
+    fun usernameRecovery(context: Context): Intent = getIntentForStartLocation(context, StartLocation.RECOVER_USERNAME)
 
     private fun getIntentForStartLocation(context: Context, startLocation: StartLocation): Intent {
       return Intent(context, AppSettingsActivity::class.java)
@@ -195,7 +213,11 @@ class AppSettingsActivity : DSLSettingsActivity(), DonationPaymentComponent {
     MANAGE_SUBSCRIPTIONS(8),
     NOTIFICATION_PROFILES(9),
     CREATE_NOTIFICATION_PROFILE(10),
-    NOTIFICATION_PROFILE_DETAILS(11);
+    NOTIFICATION_PROFILE_DETAILS(11),
+    PRIVACY(12),
+    LINKED_DEVICES(13),
+    USERNAME_LINK(14),
+    RECOVER_USERNAME(15);
 
     companion object {
       fun fromCode(code: Int?): StartLocation {

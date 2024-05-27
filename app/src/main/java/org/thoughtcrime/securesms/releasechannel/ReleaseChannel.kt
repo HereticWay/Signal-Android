@@ -1,15 +1,19 @@
 package org.thoughtcrime.securesms.releasechannel
 
+import org.thoughtcrime.securesms.attachments.Cdn
 import org.thoughtcrime.securesms.attachments.PointerAttachment
-import org.thoughtcrime.securesms.database.MessageDatabase
+import org.thoughtcrime.securesms.database.MessageTable
+import org.thoughtcrime.securesms.database.MessageType
 import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.database.model.StoryType
 import org.thoughtcrime.securesms.database.model.databaseprotos.BodyRangeList
-import org.thoughtcrime.securesms.mms.IncomingMediaMessage
+import org.thoughtcrime.securesms.mms.IncomingMessage
 import org.thoughtcrime.securesms.recipients.RecipientId
-import org.whispersystems.libsignal.util.guava.Optional
+import org.thoughtcrime.securesms.util.MediaUtil
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachment
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentPointer
 import org.whispersystems.signalservice.api.messages.SignalServiceAttachmentRemoteId
+import java.util.Optional
 import java.util.UUID
 
 /**
@@ -17,45 +21,47 @@ import java.util.UUID
  */
 object ReleaseChannel {
 
-  const val CDN_NUMBER = -1
-
-  fun insertAnnouncement(
+  fun insertReleaseChannelMessage(
     recipientId: RecipientId,
     body: String,
     threadId: Long,
-    image: String? = null,
-    imageWidth: Int = 0,
-    imageHeight: Int = 0,
+    media: String? = null,
+    mediaWidth: Int = 0,
+    mediaHeight: Int = 0,
+    mediaType: String = "image/webp",
     serverUuid: String? = UUID.randomUUID().toString(),
-    messageRanges: BodyRangeList? = null
-  ): MessageDatabase.InsertResult? {
-
-    val attachments: Optional<List<SignalServiceAttachment>> = if (image != null) {
+    messageRanges: BodyRangeList? = null,
+    storyType: StoryType = StoryType.NONE
+  ): MessageTable.InsertResult? {
+    val attachments: Optional<List<SignalServiceAttachment>> = if (media != null) {
       val attachment = SignalServiceAttachmentPointer(
-        CDN_NUMBER,
-        SignalServiceAttachmentRemoteId.from(""),
-        "image/webp",
+        Cdn.S3.cdnNumber,
+        SignalServiceAttachmentRemoteId.S3,
+        mediaType,
         null,
-        Optional.absent(),
-        Optional.absent(),
-        imageWidth,
-        imageHeight,
-        Optional.absent(),
-        Optional.of(image),
+        Optional.empty(),
+        Optional.empty(),
+        mediaWidth,
+        mediaHeight,
+        Optional.empty(),
+        Optional.empty(),
+        0,
+        Optional.of(media),
         false,
         false,
-        false,
-        Optional.absent(),
-        Optional.absent(),
+        MediaUtil.isVideo(mediaType),
+        Optional.empty(),
+        Optional.empty(),
         System.currentTimeMillis()
       )
 
       Optional.of(listOf(attachment))
     } else {
-      Optional.absent()
+      Optional.empty()
     }
 
-    val message = IncomingMediaMessage(
+    val message = IncomingMessage(
+      type = MessageType.NORMAL,
       from = recipientId,
       sentTimeMillis = System.currentTimeMillis(),
       serverTimeMillis = System.currentTimeMillis(),
@@ -63,9 +69,10 @@ object ReleaseChannel {
       body = body,
       attachments = PointerAttachment.forPointers(attachments),
       serverGuid = serverUuid,
-      messageRanges = messageRanges
+      messageRanges = messageRanges,
+      storyType = storyType
     )
 
-    return SignalDatabase.mms.insertSecureDecryptedMessageInbox(message, threadId).orNull()
+    return SignalDatabase.messages.insertMessageInbox(message, threadId).orElse(null)
   }
 }

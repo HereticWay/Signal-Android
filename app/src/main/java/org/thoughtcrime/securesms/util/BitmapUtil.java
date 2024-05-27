@@ -18,11 +18,11 @@ import androidx.annotation.Nullable;
 import androidx.annotation.WorkerThread;
 import androidx.exifinterface.media.ExifInterface;
 
+import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.engine.DiskCacheStrategy;
 
 import org.signal.core.util.ThreadUtil;
 import org.signal.core.util.logging.Log;
-import org.thoughtcrime.securesms.mms.GlideApp;
 import org.thoughtcrime.securesms.mms.MediaConstraints;
 
 import java.io.BufferedInputStream;
@@ -68,6 +68,7 @@ public class BitmapUtil {
    * @deprecated You probably want to use {@link ImageCompressionUtil} instead, which has a clearer
    *             contract and handles mimetypes properly.
    */
+  @Deprecated
   @WorkerThread
   public static <T> ScaleResult createScaledBytes(@NonNull Context context,
                                                   @NonNull T model,
@@ -83,6 +84,7 @@ public class BitmapUtil {
    * @deprecated You probably want to use {@link ImageCompressionUtil} instead, which has a clearer
    *             contract and handles mimetypes properly.
    */
+  @Deprecated
   @WorkerThread
   public static <T> ScaleResult createScaledBytes(Context context,
                                                   T model,
@@ -111,7 +113,7 @@ public class BitmapUtil {
       int    attempts = 0;
       byte[] bytes;
 
-      Bitmap scaledBitmap = GlideApp.with(context.getApplicationContext())
+      Bitmap scaledBitmap = Glide.with(context.getApplicationContext())
                                     .asBitmap()
                                     .load(model)
                                     .skipMemoryCache(true)
@@ -177,7 +179,7 @@ public class BitmapUtil {
       throws BitmapDecodingException
   {
     try {
-      return GlideApp.with(context.getApplicationContext())
+      return Glide.with(context.getApplicationContext())
                      .asBitmap()
                      .load(model)
                      .centerInside()
@@ -272,7 +274,7 @@ public class BitmapUtil {
     return new Pair<>(options.outWidth, options.outHeight);
   }
 
-  public static InputStream toCompressedJpeg(Bitmap bitmap) {
+  public static ByteArrayInputStream toCompressedJpeg(Bitmap bitmap) {
     ByteArrayOutputStream thumbnailBytes = new ByteArrayOutputStream();
     bitmap.compress(CompressFormat.JPEG, 85, thumbnailBytes);
     return new ByteArrayInputStream(thumbnailBytes.toByteArray());

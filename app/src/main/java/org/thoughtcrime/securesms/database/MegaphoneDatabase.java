@@ -15,7 +15,7 @@ import org.thoughtcrime.securesms.crypto.DatabaseSecret;
 import org.thoughtcrime.securesms.crypto.DatabaseSecretProvider;
 import org.thoughtcrime.securesms.database.model.MegaphoneRecord;
 import org.thoughtcrime.securesms.megaphone.Megaphones.Event;
-import org.thoughtcrime.securesms.util.CursorUtil;
+import org.signal.core.util.CursorUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -65,7 +65,7 @@ public class MegaphoneDatabase extends SQLiteOpenHelper implements SignalDatabas
   }
 
   public MegaphoneDatabase(@NonNull Application application, @NonNull DatabaseSecret databaseSecret) {
-    super(application, DATABASE_NAME, databaseSecret.asString(),  null, DATABASE_VERSION, 0, new SqlCipherErrorHandler(DATABASE_NAME), new SqlCipherDatabaseHook());
+    super(application, DATABASE_NAME, databaseSecret.asString(),  null, DATABASE_VERSION, 0, new SqlCipherErrorHandler(DATABASE_NAME), new SqlCipherDatabaseHook(), true);
 
     this.application = application;
   }
@@ -91,7 +91,6 @@ public class MegaphoneDatabase extends SQLiteOpenHelper implements SignalDatabas
   public void onOpen(SQLiteDatabase db) {
     Log.i(TAG, "onOpen()");
 
-    db.enableWriteAheadLogging();
     db.setForeignKeyConstraintsEnabled(true);
 
     SignalExecutors.BOUNDED.execute(() -> {

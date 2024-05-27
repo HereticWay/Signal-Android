@@ -1,19 +1,22 @@
 package org.thoughtcrime.securesms.jobs;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.signal.core.util.logging.Log;
+import org.signal.libsignal.usernames.BaseUsernameException;
+import org.signal.libsignal.usernames.Username;
 import org.thoughtcrime.securesms.database.SignalDatabase;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
-import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.JobManager;
 import org.thoughtcrime.securesms.jobmanager.JobTracker;
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
+import org.thoughtcrime.securesms.keyvalue.AccountValues;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
+import org.thoughtcrime.securesms.profiles.manage.UsernameRepository;
 import org.thoughtcrime.securesms.recipients.Recipient;
 import org.thoughtcrime.securesms.storage.StorageSyncHelper;
-import org.whispersystems.libsignal.util.guava.Optional;
 import org.whispersystems.signalservice.api.SignalServiceAccountManager;
 import org.whispersystems.signalservice.api.push.exceptions.PushNetworkException;
 import org.whispersystems.signalservice.api.storage.SignalAccountRecord;
@@ -24,6 +27,7 @@ import org.whispersystems.signalservice.api.storage.StorageKey;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -53,8 +57,8 @@ public class StorageAccountRestoreJob extends BaseJob {
   }
 
   @Override
-  public @NonNull Data serialize() {
-    return Data.EMPTY;
+  public @Nullable byte[] serialize() {
+    return null;
   }
 
   @Override
@@ -95,7 +99,7 @@ public class StorageAccountRestoreJob extends BaseJob {
       return;
     }
 
-    SignalAccountRecord accountRecord = record.getAccount().orNull();
+    SignalAccountRecord accountRecord = record.getAccount().orElse(null);
     if (accountRecord == null) {
       Log.w(TAG, "The storage record didn't actually have an account on it! Not restoring.");
       return;
@@ -105,10 +109,20 @@ public class StorageAccountRestoreJob extends BaseJob {
     Log.i(TAG, "Applying changes locally...");
     SignalDatabase.getRawDatabase().beginTransaction();
     try {
-      StorageSyncHelper.applyAccountStorageSyncUpdates(context, Recipient.self(), accountRecord, false);
+      StorageSyncHelper.applyAccountStorageSyncUpdates(context, Recipient.self().fresh(), accountRecord, false);
       SignalDatabase.getRawDatabase().setTransactionSuccessful();
     } finally {
       SignalDatabase.getRawDatabase().endTransaction();
+    }
+
+    // We will try to reclaim the username here, as early as possible, but the registration flow also enqueues a username restore job,
+    // so failing here isn't a huge deal
+    if (SignalStore.account().getUsername() != null) {
+      Log.i(TAG, "Attempting to reclaim username...");
+      UsernameRepository.UsernameReclaimResult result = UsernameRepository.reclaimUsernameIfNecessary();
+      Log.i(TAG, "Username reclaim result: " + result.name());
+    } else {
+      Log.i(TAG, "No username to reclaim.");
     }
 
     JobManager jobManager = ApplicationDependencies.getJobManager();
@@ -148,7 +162,7 @@ public class StorageAccountRestoreJob extends BaseJob {
   public static class Factory implements Job.Factory<StorageAccountRestoreJob> {
     @Override
     public @NonNull
-    StorageAccountRestoreJob create(@NonNull Parameters parameters, @NonNull Data data) {
+    StorageAccountRestoreJob create(@NonNull Parameters parameters, @Nullable byte[] serializedData) {
       return new StorageAccountRestoreJob(parameters);
     }
   }

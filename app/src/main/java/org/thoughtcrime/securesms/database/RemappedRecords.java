@@ -4,12 +4,12 @@ import androidx.annotation.NonNull;
 
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.recipients.RecipientId;
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.libsignal.util.guava.Preconditions;
+import org.whispersystems.signalservice.api.util.Preconditions;
 
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -20,7 +20,7 @@ import java.util.Set;
  *
  * There should be very few of these, so we keep them in a fast, lazily-loaded memory cache.
  *
- * One important thing to note is that this class will often be accesses inside of database
+ * One important thing to note is that this class will often be accessed inside of database
  * transactions. As a result, it cannot attempt to acquire a database lock while holding a
  * separate lock. Instead, we use the database lock itself as a locking mechanism.
  */
@@ -41,33 +41,24 @@ class RemappedRecords {
 
   @NonNull Optional<RecipientId> getRecipient(@NonNull RecipientId oldId) {
     ensureRecipientMapIsPopulated();
-    return Optional.fromNullable(recipientMap.get(oldId));
+    return Optional.ofNullable(recipientMap.get(oldId));
   }
 
   @NonNull Optional<Long> getThread(long oldId) {
     ensureThreadMapIsPopulated();
-    return Optional.fromNullable(threadMap.get(oldId));
+    return Optional.ofNullable(threadMap.get(oldId));
+  }
+
+  void deleteThread(long oldId) {
+    ensureInTransaction();
+    ensureThreadMapIsPopulated();
+    threadMap.remove(oldId);
+    SignalDatabase.remappedRecords().deleteThreadMapping(oldId);
   }
 
   boolean areAnyRemapped(@NonNull Collection<RecipientId> recipientIds) {
     ensureRecipientMapIsPopulated();
     return recipientIds.stream().anyMatch(id -> recipientMap.containsKey(id));
-  }
-
-  @NonNull Set<RecipientId> remap(@NonNull Collection<RecipientId> recipientIds) {
-    ensureRecipientMapIsPopulated();
-
-    Set<RecipientId> remapped = new LinkedHashSet<>();
-
-    for (RecipientId original : recipientIds) {
-      if (recipientMap.containsKey(original)) {
-        remapped.add(recipientMap.get(original));
-      } else {
-        remapped.add(original);
-      }
-    }
-
-    return remapped;
   }
 
   @NonNull String buildRemapDescription(@NonNull Collection<RecipientId> recipientIds) {

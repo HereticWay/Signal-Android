@@ -4,92 +4,138 @@ import android.content.Context
 import io.reactivex.rxjava3.core.Completable
 import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.schedulers.Schedulers
+import org.signal.core.util.concurrent.SignalExecutors
 import org.thoughtcrime.securesms.conversation.ConversationMessage
 import org.thoughtcrime.securesms.database.DatabaseObserver
+import org.thoughtcrime.securesms.database.MessageTable
+import org.thoughtcrime.securesms.database.RxDatabaseObserver
 import org.thoughtcrime.securesms.database.SignalDatabase
 import org.thoughtcrime.securesms.database.model.DistributionListId
 import org.thoughtcrime.securesms.database.model.MessageRecord
+import org.thoughtcrime.securesms.database.model.StoryResult
 import org.thoughtcrime.securesms.database.model.StoryViewState
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
+import org.thoughtcrime.securesms.jobs.MultiDeviceReadUpdateJob
+import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientForeverObserver
 import org.thoughtcrime.securesms.recipients.RecipientId
+import org.thoughtcrime.securesms.sms.MessageSender
 
 class StoriesLandingRepository(context: Context) {
 
   private val context = context.applicationContext
 
-  fun getStories(): Observable<List<StoriesLandingItemData>> {
-    return Observable.create<Observable<List<StoriesLandingItemData>>> { emitter ->
-      val myStoriesId = SignalDatabase.recipients.getOrInsertFromDistributionListId(DistributionListId.MY_STORY)
-      val myStories = Recipient.resolved(myStoriesId)
-
-      fun refresh() {
-        val storyMap = mutableMapOf<Recipient, List<MessageRecord>>()
-        SignalDatabase.mms.allStories.use {
-          while (it.next != null) {
-            val messageRecord = it.current
-            val recipient = if (messageRecord.isOutgoing && !messageRecord.recipient.isGroup) {
-              myStories
-            } else if (messageRecord.isOutgoing && messageRecord.recipient.isGroup) {
-              messageRecord.recipient
-            } else {
-              SignalDatabase.threads.getRecipientForThreadId(messageRecord.threadId)!!
-            }
-
-            storyMap[recipient] = (storyMap[recipient] ?: emptyList()) + messageRecord
-          }
-        }
-
-        val data: List<Observable<StoriesLandingItemData>> = storyMap.map { (sender, records) -> createStoriesLandingItemData(sender, records) }
-        if (data.isEmpty()) {
-          emitter.onNext(Observable.just(emptyList()))
-        } else {
-          emitter.onNext(Observable.combineLatest(data) { it.toList() as List<StoriesLandingItemData> })
-        }
-      }
-
-      val observer = DatabaseObserver.Observer {
-        refresh()
-      }
-
-      ApplicationDependencies.getDatabaseObserver().registerConversationListObserver(observer)
-      emitter.setCancellable {
-        ApplicationDependencies.getDatabaseObserver().unregisterObserver(observer)
-      }
-
-      refresh()
-    }.switchMap { it }.subscribeOn(Schedulers.io())
+  fun resend(story: MessageRecord): Completable {
+    return Completable.fromAction {
+      MessageSender.resend(context, story)
+    }.subscribeOn(Schedulers.io())
   }
 
-  private fun createStoriesLandingItemData(sender: Recipient, messageRecords: List<MessageRecord>): Observable<StoriesLandingItemData> {
-    return Observable.create { emitter ->
-      fun refresh() {
+  @Suppress("UsePropertyAccessSyntax")
+  fun getStories(): Observable<List<StoriesLandingItemData>> {
+    val storyRecipients: Observable<Map<Recipient, List<StoryResult>>> = RxDatabaseObserver
+      .conversationList
+      .toObservable()
+      .map {
+        val myStoriesId = SignalDatabase.recipients.getOrInsertFromDistributionListId(DistributionListId.MY_STORY)
+        val myStories = Recipient.resolved(myStoriesId)
+
+        val stories = SignalDatabase.messages.getOrderedStoryRecipientsAndIds(false)
+        val mapping: MutableMap<Recipient, List<StoryResult>> = mutableMapOf()
+
+        stories.forEach {
+          val recipient = Recipient.resolved(it.recipientId)
+          if (recipient.isDistributionList || (it.isOutgoing && !recipient.isInactiveGroup)) {
+            val list = mapping[myStories] ?: emptyList()
+            mapping[myStories] = list + it
+          }
+
+          if (!recipient.isDistributionList && !recipient.isBlocked && !recipient.isInactiveGroup) {
+            val list = mapping[recipient] ?: emptyList()
+            mapping[recipient] = list + it
+          }
+        }
+
+        mapping
+      }
+
+    return storyRecipients.switchMap { map ->
+      val observables = map.map { (recipient, results) ->
+        val messages = results
+          .sortedBy { it.messageSentTimestamp }
+          .reversed()
+          .take(if (recipient.isMyStory) 2 else 1)
+          .map {
+            SignalDatabase.messages.getMessageRecord(it.messageId)
+          }
+
+        var sendingCount: Long = 0
+        var failureCount: Long = 0
+
+        if (recipient.isMyStory) {
+          SignalDatabase.messages.getMessages(results.map { it.messageId }).use { reader ->
+            var messageRecord: MessageRecord? = reader.getNext()
+            while (messageRecord != null) {
+              if (messageRecord.isOutgoing && (messageRecord.isPending || messageRecord.isMediaPending)) {
+                sendingCount++
+              } else if (messageRecord.isFailed) {
+                failureCount++
+              }
+
+              messageRecord = reader.getNext()
+            }
+          }
+        }
+
+        createStoriesLandingItemData(recipient, messages, sendingCount, failureCount)
+      }
+
+      if (observables.isEmpty()) {
+        Observable.just(emptyList())
+      } else {
+        Observable.combineLatest(observables) {
+          it.filterIsInstance<StoriesLandingItemData>()
+        }
+      }
+    }.subscribeOn(Schedulers.io())
+  }
+
+  private fun createStoriesLandingItemData(sender: Recipient, messageRecords: List<MessageRecord>, sendingCount: Long, failureCount: Long): Observable<StoriesLandingItemData> {
+    val itemDataObservable = Observable.create<StoriesLandingItemData> { emitter ->
+      fun refresh(sender: Recipient) {
+        val primaryIndex = messageRecords.indexOfFirst { !it.isOutgoing && !it.isViewed }.takeIf { it > -1 } ?: 0
         val itemData = StoriesLandingItemData(
           storyRecipient = sender,
-          storyViewState = getStoryViewState(messageRecords),
-          hasReplies = messageRecords.any { SignalDatabase.mms.getNumberOfStoryReplies(it.id) > 0 },
-          hasRepliesFromSelf = messageRecords.any { SignalDatabase.mms.hasSelfReplyInStory(it.id) },
-          isHidden = Recipient.resolved(messageRecords.first().recipient.id).shouldHideStory(),
-          primaryStory = ConversationMessage.ConversationMessageFactory.createWithUnresolvedData(context, messageRecords.first()),
-          secondaryStory = messageRecords.drop(1).firstOrNull()?.let {
-            ConversationMessage.ConversationMessageFactory.createWithUnresolvedData(context, it)
-          }
+          storyViewState = StoryViewState.NONE,
+          hasReplies = messageRecords.any { SignalDatabase.messages.getNumberOfStoryReplies(it.id) > 0 },
+          hasRepliesFromSelf = messageRecords.any { SignalDatabase.messages.hasSelfReplyInStory(it.id) },
+          isHidden = sender.shouldHideStory,
+          primaryStory = ConversationMessage.ConversationMessageFactory.createWithUnresolvedData(context, messageRecords[primaryIndex], sender),
+          secondaryStory = if (sender.isMyStory) {
+            messageRecords.drop(1).firstOrNull()?.let {
+              ConversationMessage.ConversationMessageFactory.createWithUnresolvedData(context, it, sender)
+            }
+          } else {
+            null
+          },
+          sendingCount = sendingCount,
+          failureCount = failureCount
         )
 
         emitter.onNext(itemData)
       }
 
       val newRepliesObserver = DatabaseObserver.Observer {
-        refresh()
+        Recipient.live(sender.id).refresh()
       }
 
       val recipientChangedObserver = RecipientForeverObserver {
-        refresh()
+        refresh(it)
       }
 
       ApplicationDependencies.getDatabaseObserver().registerConversationObserver(messageRecords.first().threadId, newRepliesObserver)
-      val liveRecipient = Recipient.live(messageRecords.first().recipient.id)
+      val liveRecipient = Recipient.live(sender.id)
       liveRecipient.observeForever(recipientChangedObserver)
 
       emitter.setCancellable {
@@ -97,7 +143,13 @@ class StoriesLandingRepository(context: Context) {
         liveRecipient.removeForeverObserver(recipientChangedObserver)
       }
 
-      refresh()
+      refresh(sender)
+    }
+
+    val storyViewedStateObservable = StoryViewState.getForRecipientId(if (sender.isMyStory) Recipient.self().id else sender.id)
+
+    return Observable.combineLatest(itemDataObservable, storyViewedStateObservable) { data, state ->
+      data.copy(storyViewState = state)
     }
   }
 
@@ -107,16 +159,24 @@ class StoriesLandingRepository(context: Context) {
     }.subscribeOn(Schedulers.io())
   }
 
-  private fun getStoryViewState(messageRecords: List<MessageRecord>): StoryViewState {
-    val incoming = messageRecords.filterNot { it.isOutgoing }
-    if (incoming.isEmpty()) {
-      return StoryViewState.NONE
-    }
+  /**
+   * Marks all stories as "seen" by the user (marking them as read in the database)
+   */
+  fun markStoriesRead() {
+    SignalExecutors.BOUNDED_IO.execute {
+      val messageInfos: List<MessageTable.MarkedMessageInfo> = SignalDatabase.messages.markAllIncomingStoriesRead()
+      val releaseThread: Long? = SignalStore.releaseChannelValues().releaseChannelRecipientId?.let { SignalDatabase.threads.getThreadIdIfExistsFor(it) }
 
-    if (incoming.any { it.viewedReceiptCount == 0 }) {
-      return StoryViewState.UNVIEWED
+      MultiDeviceReadUpdateJob.enqueue(messageInfos.filter { it.threadId == releaseThread }.map { it.syncMessageId })
     }
+  }
 
-    return StoryViewState.VIEWED
+  /**
+   * Marks all failed stories as "notified" by the user (marking them as notified in the database)
+   */
+  fun markFailedStoriesNotified() {
+    SignalExecutors.BOUNDED_IO.execute {
+      SignalDatabase.messages.markAllFailedStoriesNotified()
+    }
   }
 }

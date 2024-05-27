@@ -1,11 +1,10 @@
 package org.thoughtcrime.securesms.keyvalue;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 
-import org.whispersystems.libsignal.util.guava.Preconditions;
 import org.whispersystems.signalservice.api.storage.SignalStorageManifest;
 import org.whispersystems.signalservice.api.storage.StorageKey;
+import org.whispersystems.signalservice.api.util.Preconditions;
 
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +33,7 @@ public class StorageServiceValues extends SignalStoreValues {
     if (getStore().containsKey(SYNC_STORAGE_KEY)) {
       return new StorageKey(getBlob(SYNC_STORAGE_KEY, null));
     }
-    return SignalStore.kbsValues().getOrCreateMasterKey().deriveStorageServiceKey();
+    return SignalStore.svr().getOrCreateMasterKey().deriveStorageServiceKey();
   }
 
   public long getLastSyncTime() {

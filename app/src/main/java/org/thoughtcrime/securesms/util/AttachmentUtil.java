@@ -32,24 +32,37 @@ public class AttachmentUtil {
     }
 
     if (!isFromTrustedConversation(context, attachment)) {
+      Log.w(TAG, "Not allowing download due to untrusted conversation");
       return false;
     }
 
     Set<String> allowedTypes = getAllowedAutoDownloadTypes(context);
-    String      contentType  = attachment.getContentType();
+    String      contentType  = attachment.contentType;
 
-    if (attachment.isVoiceNote()                                                       ||
-        (MediaUtil.isAudio(attachment) && TextUtils.isEmpty(attachment.getFileName())) ||
-        MediaUtil.isLongTextType(attachment.getContentType())                          ||
+    if (attachment.voiceNote ||
+        (MediaUtil.isAudio(attachment) && TextUtils.isEmpty(attachment.fileName)) ||
+        MediaUtil.isLongTextType(attachment.contentType) ||
         attachment.isSticker())
     {
       return true;
-    } else if (attachment.isVideoGif()) {
-      return NotInCallConstraint.isNotInConnectedCall() && allowedTypes.contains("image");
+    } else if (attachment.videoGif) {
+      boolean allowed = NotInCallConstraint.isNotInConnectedCall() && allowedTypes.contains("image");
+      if (!allowed) {
+        Log.w(TAG, "Not auto downloading. inCall: " + NotInCallConstraint.isNotInConnectedCall() + " allowedType: " + allowedTypes.contains("image"));
+      }
+      return allowed;
     } else if (isNonDocumentType(contentType)) {
-      return NotInCallConstraint.isNotInConnectedCall() && allowedTypes.contains(MediaUtil.getDiscreteMimeType(contentType));
+      boolean allowed = NotInCallConstraint.isNotInConnectedCall() && allowedTypes.contains(MediaUtil.getDiscreteMimeType(contentType));
+      if (!allowed) {
+        Log.w(TAG, "Not auto downloading. inCall: " + NotInCallConstraint.isNotInConnectedCall() + " allowedType: " + allowedTypes.contains(MediaUtil.getDiscreteMimeType(contentType)));
+      }
+      return allowed;
     } else {
-      return NotInCallConstraint.isNotInConnectedCall() && allowedTypes.contains("documents");
+      boolean allowed = NotInCallConstraint.isNotInConnectedCall() && allowedTypes.contains("documents");
+      if (!allowed) {
+        Log.w(TAG, "Not auto downloading. inCall: " + NotInCallConstraint.isNotInConnectedCall() + " allowedType: " + allowedTypes.contains("documents"));
+      }
+      return allowed;
     }
   }
 
@@ -61,14 +74,14 @@ public class AttachmentUtil {
   public static void deleteAttachment(@NonNull Context context,
                                       @NonNull DatabaseAttachment attachment)
   {
-    AttachmentId attachmentId    = attachment.getAttachmentId();
-    long         mmsId           = attachment.getMmsId();
+    AttachmentId attachmentId    = attachment.attachmentId;
+    long         mmsId           = attachment.mmsId;
     int          attachmentCount = SignalDatabase.attachments()
                                                  .getAttachmentsForMessage(mmsId)
                                                  .size();
 
     if (attachmentCount <= 1) {
-      SignalDatabase.mms().deleteMessage(mmsId);
+      SignalDatabase.messages().deleteMessage(mmsId);
     } else {
       SignalDatabase.attachments().deleteAttachment(attachmentId);
     }
@@ -91,15 +104,15 @@ public class AttachmentUtil {
   @WorkerThread
   private static boolean isFromTrustedConversation(@NonNull Context context, @NonNull DatabaseAttachment attachment) {
     try {
-      MessageRecord message = SignalDatabase.mms().getMessageRecord(attachment.getMmsId());
+      MessageRecord message = SignalDatabase.messages().getMessageRecord(attachment.mmsId);
 
-      Recipient individualRecipient = message.getRecipient();
-      Recipient threadRecipient     = SignalDatabase.threads().getRecipientForThreadId(message.getThreadId());
+      Recipient fromRecipient = message.getFromRecipient();
+      Recipient toRecipient   = SignalDatabase.threads().getRecipientForThreadId(message.getThreadId());
 
-      if (threadRecipient != null && threadRecipient.isGroup()) {
-        return threadRecipient.isProfileSharing() || isTrustedIndividual(individualRecipient, message);
+      if (toRecipient != null && toRecipient.isGroup()) {
+        return toRecipient.isProfileSharing() || isTrustedIndividual(fromRecipient, message);
       } else {
-        return isTrustedIndividual(individualRecipient, message);
+        return isTrustedIndividual(fromRecipient, message);
       }
     } catch (NoSuchMessageException e) {
       Log.w(TAG, "Message could not be found! Assuming not a trusted contact.");

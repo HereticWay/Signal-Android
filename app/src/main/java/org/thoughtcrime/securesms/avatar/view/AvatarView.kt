@@ -4,10 +4,11 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.View
 import android.widget.FrameLayout
+import androidx.core.content.res.use
+import com.bumptech.glide.RequestManager
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.AvatarImageView
 import org.thoughtcrime.securesms.database.model.StoryViewState
-import org.thoughtcrime.securesms.mms.GlideRequests
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.stories.Stories
 import org.thoughtcrime.securesms.util.visible
@@ -20,10 +21,12 @@ class AvatarView @JvmOverloads constructor(
   attrs: AttributeSet? = null
 ) : FrameLayout(context, attrs) {
 
+  private var storyRingScale = 0.8f
   init {
     inflate(context, R.layout.avatar_view, this)
 
     isClickable = false
+    storyRingScale = context.theme.obtainStyledAttributes(attrs, R.styleable.AvatarView, 0, 0).use { it.getFloat(R.styleable.AvatarView_storyRingScale, storyRingScale) }
   }
 
   private val avatar: AvatarImageView = findViewById<AvatarImageView>(R.id.avatar_image_view).apply {
@@ -38,10 +41,10 @@ class AvatarView @JvmOverloads constructor(
     }
 
     storyRing.visible = true
-    storyRing.isActivated = hasUnreadStory
+    storyRing.setBackgroundResource(if (hasUnreadStory) R.drawable.avatar_story_ring_active else R.drawable.avatar_story_ring_inactive)
 
-    avatar.scaleX = 0.82f
-    avatar.scaleY = 0.82f
+    avatar.scaleX = storyRingScale
+    avatar.scaleY = storyRingScale
   }
 
   private fun hideStoryRing() {
@@ -49,6 +52,10 @@ class AvatarView @JvmOverloads constructor(
 
     avatar.scaleX = 1f
     avatar.scaleY = 1f
+  }
+
+  fun hasStory(): Boolean {
+    return storyRing.visible
   }
 
   fun setStoryRingFromState(storyViewState: StoryViewState) {
@@ -69,7 +76,7 @@ class AvatarView @JvmOverloads constructor(
   /**
    * Displays Note-to-Self
    */
-  fun displayChatAvatar(requestManager: GlideRequests, recipient: Recipient, isQuickContactEnabled: Boolean) {
+  fun displayChatAvatar(requestManager: RequestManager, recipient: Recipient, isQuickContactEnabled: Boolean) {
     avatar.setAvatar(requestManager, recipient, isQuickContactEnabled)
   }
 

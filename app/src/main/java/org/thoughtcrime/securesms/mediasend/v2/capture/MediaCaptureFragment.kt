@@ -1,16 +1,18 @@
 package org.thoughtcrime.securesms.mediasend.v2.capture
 
-import android.os.Build
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
-import androidx.lifecycle.LiveData
 import androidx.navigation.fragment.findNavController
 import app.cash.exhaustive.Exhaustive
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.reactivex.rxjava3.core.Flowable
+import org.signal.core.util.concurrent.LifecycleDisposable
 import org.signal.core.util.logging.Log
+import org.thoughtcrime.securesms.DeviceActivity
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.mediasend.CameraFragment
 import org.thoughtcrime.securesms.mediasend.Media
@@ -20,10 +22,12 @@ import org.thoughtcrime.securesms.mediasend.v2.MediaSelectionNavigator.Companion
 import org.thoughtcrime.securesms.mediasend.v2.MediaSelectionViewModel
 import org.thoughtcrime.securesms.mms.MediaConstraints
 import org.thoughtcrime.securesms.permissions.Permissions
-import org.thoughtcrime.securesms.util.LifecycleDisposable
+import org.thoughtcrime.securesms.stories.Stories
+import org.thoughtcrime.securesms.util.CommunicationActions
 import org.thoughtcrime.securesms.util.navigation.safeNavigate
-import org.whispersystems.libsignal.util.guava.Optional
 import java.io.FileDescriptor
+import java.util.Optional
+import java.util.concurrent.TimeUnit
 
 private val TAG = Log.tag(MediaCaptureFragment::class.java)
 
@@ -46,7 +50,7 @@ class MediaCaptureFragment : Fragment(R.layout.fragment_container), CameraFragme
   private val lifecycleDisposable = LifecycleDisposable()
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-    captureChildFragment = CameraFragment.newInstance() as CameraFragment
+    captureChildFragment = CameraFragment.newInstance(sharedViewModel.isContactSelectionRequired) as CameraFragment
 
     navigator = MediaSelectionNavigator(
       toGallery = R.id.action_mediaCaptureFragment_to_mediaGalleryFragment
@@ -57,7 +61,7 @@ class MediaCaptureFragment : Fragment(R.layout.fragment_container), CameraFragme
       .replace(R.id.fragment_container, captureChildFragment as Fragment)
       .commitNowAllowingStateLoss()
 
-    viewModel.events.observe(viewLifecycleOwner) { event ->
+    lifecycleDisposable += viewModel.events.subscribe { event ->
       @Exhaustive
       when (event) {
         MediaCaptureEvent.MediaCaptureRenderFailed -> {
@@ -72,6 +76,28 @@ class MediaCaptureFragment : Fragment(R.layout.fragment_container), CameraFragme
           }
 
           navigator.goToReview(findNavController())
+        }
+        is MediaCaptureEvent.UsernameScannedFromQrCode -> {
+          MaterialAlertDialogBuilder(requireContext())
+            .setTitle(getString(R.string.MediaCaptureFragment_username_dialog_title, event.username))
+            .setMessage(getString(R.string.MediaCaptureFragment_username_dialog_body, event.username))
+            .setPositiveButton(R.string.MediaCaptureFragment_username_dialog_go_to_chat_button) { d, _ ->
+              CommunicationActions.startConversation(requireContext(), event.recipient, "")
+              requireActivity().finish()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
+        }
+        is MediaCaptureEvent.DeviceLinkScannedFromQrCode -> {
+          MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.MediaCaptureFragment_device_link_dialog_title)
+            .setMessage(R.string.MediaCaptureFragment_device_link_dialog_body)
+            .setPositiveButton(R.string.MediaCaptureFragment_device_link_dialog_continue) { d, _ ->
+              startActivity(DeviceActivity.getIntentForScanner(requireContext()))
+              requireActivity().finish()
+            }
+            .setNegativeButton(android.R.string.cancel, null)
+            .show()
         }
       }
     }
@@ -141,15 +167,6 @@ class MediaCaptureFragment : Fragment(R.layout.fragment_container), CameraFragme
     }
   }
 
-  override fun getDisplayRotation(): Int {
-    return if (Build.VERSION.SDK_INT >= 30) {
-      requireContext().display?.rotation ?: 0
-    } else {
-      @Suppress("DEPRECATION")
-      requireActivity().windowManager.defaultDisplay.rotation
-    }
-  }
-
   override fun onCameraCountButtonClicked() {
     val controller = findNavController()
     captureChildFragment.fadeOutControls {
@@ -157,12 +174,20 @@ class MediaCaptureFragment : Fragment(R.layout.fragment_container), CameraFragme
     }
   }
 
-  override fun getMostRecentMediaItem(): LiveData<Optional<Media>> {
+  override fun onQrCodeFound(data: String) {
+    viewModel.onQrCodeFound(data)
+  }
+
+  override fun getMostRecentMediaItem(): Flowable<Optional<Media>> {
     return viewModel.getMostRecentMedia()
   }
 
   override fun getMediaConstraints(): MediaConstraints {
     return sharedViewModel.getMediaConstraints()
+  }
+
+  override fun getMaxVideoDuration(): Int {
+    return if (sharedViewModel.isStory()) TimeUnit.MILLISECONDS.toSeconds(Stories.MAX_VIDEO_DURATION_MILLIS).toInt() else -1
   }
 
   private fun isFirst(): Boolean {

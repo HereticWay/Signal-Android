@@ -2,7 +2,9 @@ package org.thoughtcrime.securesms.stories.landing
 
 import android.view.View
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.avatar.view.AvatarView
 import org.thoughtcrime.securesms.components.settings.PreferenceModel
+import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.util.adapter.mapping.LayoutFactory
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingViewHolder
@@ -24,8 +26,11 @@ object MyStoriesItem {
 
   private class ViewHolder(itemView: View) : MappingViewHolder<Model>(itemView) {
 
+    private val avatarView: AvatarView = itemView.findViewById(R.id.avatar)
+
     override fun bind(model: Model) {
       itemView.setOnClickListener { model.onClick() }
+      avatarView.displayProfileAvatar(Recipient.self())
     }
   }
 }

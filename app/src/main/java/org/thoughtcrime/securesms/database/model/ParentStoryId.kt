@@ -12,7 +12,9 @@ import kotlin.math.abs
 sealed class ParentStoryId(protected val id: Long) {
   abstract fun serialize(): Long
 
-  fun asMessageId(): MessageId = MessageId(abs(id), true)
+  fun asMessageId(): MessageId = MessageId(abs(id))
+  fun isGroupReply() = serialize() > 0
+  fun isDirectReply() = !isGroupReply()
 
   /**
    * A parent story who's child should be displayed in a group reply thread.

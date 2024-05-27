@@ -2,44 +2,91 @@ package org.thoughtcrime.securesms
 
 import android.content.ContentValues
 import android.os.Build
-import leakcanary.LeakCanary
+import org.signal.core.util.logging.AndroidLogger
+import org.signal.core.util.logging.Log
 import org.signal.spinner.Spinner
 import org.signal.spinner.Spinner.DatabaseConfig
+import org.signal.spinner.SpinnerLogger
+import org.thoughtcrime.securesms.database.AttachmentTransformer
 import org.thoughtcrime.securesms.database.DatabaseMonitor
+import org.thoughtcrime.securesms.database.GV2Transformer
+import org.thoughtcrime.securesms.database.GV2UpdateTransformer
+import org.thoughtcrime.securesms.database.IsStoryTransformer
 import org.thoughtcrime.securesms.database.JobDatabase
 import org.thoughtcrime.securesms.database.KeyValueDatabase
+import org.thoughtcrime.securesms.database.KyberKeyTransformer
 import org.thoughtcrime.securesms.database.LocalMetricsDatabase
 import org.thoughtcrime.securesms.database.LogDatabase
 import org.thoughtcrime.securesms.database.MegaphoneDatabase
 import org.thoughtcrime.securesms.database.MessageBitmaskColumnTransformer
+import org.thoughtcrime.securesms.database.MessageRangesTransformer
+import org.thoughtcrime.securesms.database.ProfileKeyCredentialTransformer
 import org.thoughtcrime.securesms.database.QueryMonitor
+import org.thoughtcrime.securesms.database.RecipientTransformer
 import org.thoughtcrime.securesms.database.SignalDatabase
+import org.thoughtcrime.securesms.database.TimestampTransformer
+import org.thoughtcrime.securesms.keyvalue.SignalStore
+import org.thoughtcrime.securesms.logging.PersistentLogger
+import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.util.AppSignatureUtil
-import shark.AndroidReferenceMatchers
+import org.thoughtcrime.securesms.util.FeatureFlags
+import java.util.Locale
 
 class SpinnerApplicationContext : ApplicationContext() {
   override fun onCreate() {
     super.onCreate()
 
+    try {
+      Class.forName("dalvik.system.CloseGuard")
+        .getMethod("setEnabled", Boolean::class.javaPrimitiveType)
+        .invoke(null, true)
+    } catch (e: ReflectiveOperationException) {
+      throw RuntimeException(e)
+    }
+
     Spinner.init(
       this,
-      Spinner.DeviceInfo(
-        name = "${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})",
-        packageName = "$packageName (${AppSignatureUtil.getAppSignature(this).or("Unknown")})",
-        appVersion = "${BuildConfig.VERSION_NAME} (${BuildConfig.CANONICAL_VERSION_CODE}, ${BuildConfig.GIT_HASH})"
+      mapOf(
+        "Device" to { "${Build.MODEL} (Android ${Build.VERSION.RELEASE}, API ${Build.VERSION.SDK_INT})" },
+        "Package" to { "$packageName (${AppSignatureUtil.getAppSignature(this)})" },
+        "App Version" to { "${BuildConfig.VERSION_NAME} (${BuildConfig.CANONICAL_VERSION_CODE}, ${BuildConfig.GIT_HASH})" },
+        "Profile Name" to { (if (SignalStore.account().isRegistered) Recipient.self().profileName.toString() else "none") },
+        "E164" to { SignalStore.account().e164 ?: "none" },
+        "ACI" to { SignalStore.account().aci?.toString() ?: "none" },
+        "PNI" to { SignalStore.account().pni?.toString() ?: "none" },
+        Spinner.KEY_ENVIRONMENT to { BuildConfig.FLAVOR_environment.uppercase(Locale.US) }
       ),
       linkedMapOf(
         "signal" to DatabaseConfig(
-          db = SignalDatabase.rawDatabase,
-          columnTransformers = listOf(MessageBitmaskColumnTransformer)
+          db = { SignalDatabase.rawDatabase },
+          columnTransformers = listOf(
+            MessageBitmaskColumnTransformer,
+            GV2Transformer,
+            GV2UpdateTransformer,
+            IsStoryTransformer,
+            TimestampTransformer,
+            ProfileKeyCredentialTransformer,
+            MessageRangesTransformer,
+            KyberKeyTransformer,
+            RecipientTransformer,
+            AttachmentTransformer
+          )
         ),
-        "jobmanager" to DatabaseConfig(db = JobDatabase.getInstance(this).sqlCipherDatabase),
-        "keyvalue" to DatabaseConfig(db = KeyValueDatabase.getInstance(this).sqlCipherDatabase),
-        "megaphones" to DatabaseConfig(db = MegaphoneDatabase.getInstance(this).sqlCipherDatabase),
-        "localmetrics" to DatabaseConfig(db = LocalMetricsDatabase.getInstance(this).sqlCipherDatabase),
-        "logs" to DatabaseConfig(db = LogDatabase.getInstance(this).sqlCipherDatabase),
+        "jobmanager" to DatabaseConfig(db = { JobDatabase.getInstance(this).sqlCipherDatabase }, columnTransformers = listOf(TimestampTransformer)),
+        "keyvalue" to DatabaseConfig(db = { KeyValueDatabase.getInstance(this).sqlCipherDatabase }),
+        "megaphones" to DatabaseConfig(db = { MegaphoneDatabase.getInstance(this).sqlCipherDatabase }),
+        "localmetrics" to DatabaseConfig(db = { LocalMetricsDatabase.getInstance(this).sqlCipherDatabase }),
+        "logs" to DatabaseConfig(
+          db = { LogDatabase.getInstance(this).sqlCipherDatabase },
+          columnTransformers = listOf(TimestampTransformer)
+        )
+      ),
+      linkedMapOf(
+        StorageServicePlugin.PATH to StorageServicePlugin()
       )
     )
+
+    Log.initialize({ FeatureFlags.internalUser() }, AndroidLogger(), PersistentLogger(this), SpinnerLogger())
 
     DatabaseMonitor.initialize(object : QueryMonitor {
       override fun onSql(sql: String, args: Array<Any>?) {
@@ -58,41 +105,5 @@ class SpinnerApplicationContext : ApplicationContext() {
         Spinner.onUpdate("signal", table, values, selection, args)
       }
     })
-
-    LeakCanary.config = LeakCanary.config.copy(
-      referenceMatchers = AndroidReferenceMatchers.appDefaults +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "android.service.media.MediaBrowserService\$ServiceBinder",
-          fieldName = "this\$0"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "androidx.media.MediaBrowserServiceCompat\$MediaBrowserServiceImplApi26\$MediaBrowserServiceApi26",
-          fieldName = "mBase"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "android.support.v4.media.MediaBrowserCompat",
-          fieldName = "mImpl"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "android.support.v4.media.session.MediaControllerCompat",
-          fieldName = "mToken"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "android.support.v4.media.session.MediaControllerCompat",
-          fieldName = "mImpl"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "org.thoughtcrime.securesms.components.voice.VoiceNotePlaybackService",
-          fieldName = "mApplication"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "org.thoughtcrime.securesms.service.GenericForegroundService\$LocalBinder",
-          fieldName = "this\$0"
-        ) +
-        AndroidReferenceMatchers.ignoredInstanceField(
-          className = "org.thoughtcrime.securesms.contacts.ContactsSyncAdapter",
-          fieldName = "mContext"
-        )
-    )
   }
 }

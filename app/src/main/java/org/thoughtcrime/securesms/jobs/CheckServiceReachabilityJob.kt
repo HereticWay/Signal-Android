@@ -3,14 +3,14 @@ package org.thoughtcrime.securesms.jobs
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.BuildConfig
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
-import org.thoughtcrime.securesms.jobmanager.Data
 import org.thoughtcrime.securesms.jobmanager.Job
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint
 import org.thoughtcrime.securesms.keyvalue.SignalStore
-import org.whispersystems.libsignal.util.guava.Optional
+import org.thoughtcrime.securesms.stories.Stories
 import org.whispersystems.signalservice.api.websocket.WebSocketConnectionState
 import org.whispersystems.signalservice.internal.util.StaticCredentialsProvider
-import org.whispersystems.signalservice.internal.websocket.WebSocketConnection
+import org.whispersystems.signalservice.internal.websocket.OkHttpWebSocketConnection
+import java.util.Optional
 import java.util.concurrent.TimeUnit
 
 /**
@@ -41,8 +41,8 @@ class CheckServiceReachabilityJob private constructor(params: Parameters) : Base
     }
   }
 
-  override fun serialize(): Data {
-    return Data.EMPTY
+  override fun serialize(): ByteArray? {
+    return null
   }
 
   override fun getFactoryKey(): String {
@@ -64,7 +64,7 @@ class CheckServiceReachabilityJob private constructor(params: Parameters) : Base
 
     SignalStore.misc().lastCensorshipServiceReachabilityCheckTime = System.currentTimeMillis()
 
-    val uncensoredWebsocket = WebSocketConnection(
+    val uncensoredWebsocket = OkHttpWebSocketConnection(
       "uncensored-test",
       ApplicationDependencies.getSignalServiceNetworkAccess().uncensoredConfiguration,
       Optional.of(
@@ -78,7 +78,8 @@ class CheckServiceReachabilityJob private constructor(params: Parameters) : Base
       ),
       BuildConfig.SIGNAL_AGENT,
       null,
-      ""
+      "",
+      Stories.isFeatureEnabled()
     )
 
     try {
@@ -112,7 +113,7 @@ class CheckServiceReachabilityJob private constructor(params: Parameters) : Base
   }
 
   class Factory : Job.Factory<CheckServiceReachabilityJob> {
-    override fun create(parameters: Parameters, data: Data): CheckServiceReachabilityJob {
+    override fun create(parameters: Parameters, serializedData: ByteArray?): CheckServiceReachabilityJob {
       return CheckServiceReachabilityJob(parameters)
     }
   }

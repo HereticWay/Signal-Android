@@ -34,7 +34,6 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 
 import org.signal.core.util.logging.Log;
-import org.thoughtcrime.securesms.ApplicationContext;
 import org.thoughtcrime.securesms.BuildConfig;
 import org.thoughtcrime.securesms.DummyActivity;
 import org.thoughtcrime.securesms.MainActivity;
@@ -264,15 +263,16 @@ public class KeyCachingService extends Service {
     }
 
     Log.i(TAG, "foregrounding KCS");
-    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NotificationChannels.LOCKED_STATUS);
+    NotificationCompat.Builder builder = new NotificationCompat.Builder(this, NotificationChannels.getInstance().LOCKED_STATUS);
 
     builder.setContentTitle(getString(R.string.KeyCachingService_passphrase_cached));
     builder.setContentText(getString(R.string.KeyCachingService_signal_passphrase_cached));
     builder.setSmallIcon(R.drawable.icon_cached);
     builder.setWhen(0);
     builder.setPriority(Notification.PRIORITY_MIN);
+    builder.setOngoing(true);
 
-    builder.addAction(R.drawable.ic_menu_lock_dark, getString(R.string.KeyCachingService_lock), buildLockIntent());
+    builder.addAction(R.drawable.symbol_lock_24, getString(R.string.KeyCachingService_lock), buildLockIntent());
     builder.setContentIntent(buildLaunchIntent());
 
     stopForeground(true);

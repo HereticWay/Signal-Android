@@ -2,17 +2,16 @@ package org.thoughtcrime.securesms.components.identity;
 
 import android.content.Context;
 import android.content.DialogInterface;
-import android.os.AsyncTask;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.crypto.ReentrantSessionLock;
-import org.thoughtcrime.securesms.database.IdentityDatabase;
+import org.thoughtcrime.securesms.database.IdentityTable;
 import org.thoughtcrime.securesms.database.model.IdentityRecord;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
-import org.thoughtcrime.securesms.util.concurrent.SimpleTask;
+import org.signal.core.util.concurrent.SimpleTask;
 import org.whispersystems.signalservice.api.SignalSessionLock;
 
 import java.util.List;
@@ -32,7 +31,7 @@ public class UnverifiedSendDialog extends AlertDialog.Builder implements DialogI
     this.resendListener   = resendListener;
 
     setTitle(R.string.UnverifiedSendDialog_send_message);
-    setIcon(R.drawable.ic_warning);
+    setIcon(R.drawable.symbol_error_triangle_fill_24);
     setMessage(message);
     setPositiveButton(R.string.UnverifiedSendDialog_send, this);
     setNegativeButton(android.R.string.cancel, null);
@@ -45,7 +44,7 @@ public class UnverifiedSendDialog extends AlertDialog.Builder implements DialogI
         for (IdentityRecord identityRecord : untrustedRecords) {
           ApplicationDependencies.getProtocolStore().aci().identities().setVerified(identityRecord.getRecipientId(),
                                                                                     identityRecord.getIdentityKey(),
-                                                                                    IdentityDatabase.VerifiedStatus.DEFAULT);
+                                                                                    IdentityTable.VerifiedStatus.DEFAULT);
         }
       }
       return null;

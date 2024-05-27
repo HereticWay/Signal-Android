@@ -1,14 +1,13 @@
 package org.thoughtcrime.securesms;
 
-import org.signal.zkgroup.ServerPublicParams;
-import org.signal.zkgroup.ServerSecretParams;
-import org.signal.zkgroup.VerificationFailedException;
-import org.signal.zkgroup.groups.GroupPublicParams;
-import org.signal.zkgroup.profiles.ProfileKeyCommitment;
-import org.signal.zkgroup.profiles.ProfileKeyCredentialPresentation;
-import org.signal.zkgroup.profiles.ProfileKeyCredentialRequest;
-import org.signal.zkgroup.profiles.ProfileKeyCredentialResponse;
-import org.signal.zkgroup.profiles.ServerZkProfileOperations;
+import org.signal.libsignal.zkgroup.ServerPublicParams;
+import org.signal.libsignal.zkgroup.ServerSecretParams;
+import org.signal.libsignal.zkgroup.VerificationFailedException;
+import org.signal.libsignal.zkgroup.groups.GroupPublicParams;
+import org.signal.libsignal.zkgroup.profiles.ProfileKeyCommitment;
+import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredentialPresentation;
+import org.signal.libsignal.zkgroup.profiles.ProfileKeyCredentialRequest;
+import org.signal.libsignal.zkgroup.profiles.ServerZkProfileOperations;
 import org.whispersystems.signalservice.test.LibSignalLibraryUtil;
 
 import java.util.UUID;
@@ -33,17 +32,5 @@ public final class TestZkGroupServer {
 
   public ServerPublicParams getServerPublicParams() {
     return serverPublicParams;
-  }
-
-  public ProfileKeyCredentialResponse getProfileKeyCredentialResponse(ProfileKeyCredentialRequest request, UUID uuid, ProfileKeyCommitment commitment) throws VerificationFailedException {
-     return serverZkProfileOperations.issueProfileKeyCredential(request, uuid, commitment);
-  }
-
-  public void assertProfileKeyCredentialPresentation(GroupPublicParams publicParams, ProfileKeyCredentialPresentation profileKeyCredentialPresentation) {
-    try {
-      serverZkProfileOperations.verifyProfileKeyCredentialPresentation(publicParams, profileKeyCredentialPresentation);
-    } catch (VerificationFailedException e) {
-      throw new AssertionError(e);
-    }
   }
 }

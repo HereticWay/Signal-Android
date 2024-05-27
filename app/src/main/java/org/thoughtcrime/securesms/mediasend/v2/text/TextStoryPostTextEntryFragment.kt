@@ -20,10 +20,13 @@ import androidx.appcompat.widget.AppCompatSeekBar
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.updateLayoutParams
+import androidx.core.widget.doAfterTextChanged
 import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.viewModels
 import androidx.transition.TransitionManager
 import com.airbnb.lottie.SimpleColorFilter
+import io.reactivex.rxjava3.kotlin.subscribeBy
+import org.signal.core.util.concurrent.LifecycleDisposable
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.KeyboardEntryDialogFragment
 import org.thoughtcrime.securesms.mediasend.v2.MediaAnimations
@@ -32,8 +35,10 @@ import org.thoughtcrime.securesms.scribbles.HSVColorSlider.getColor
 import org.thoughtcrime.securesms.scribbles.HSVColorSlider.setColor
 import org.thoughtcrime.securesms.scribbles.HSVColorSlider.setUpForColor
 import org.thoughtcrime.securesms.util.FeatureFlags
+import org.thoughtcrime.securesms.util.TextSecurePreferences
 import org.thoughtcrime.securesms.util.ViewUtil
 import org.thoughtcrime.securesms.util.fragments.findListener
+import org.thoughtcrime.securesms.util.setIncognitoKeyboardEnabled
 import java.util.Locale
 
 /**
@@ -48,6 +53,8 @@ class TextStoryPostTextEntryFragment : KeyboardEntryDialogFragment(
       requireActivity()
     }
   )
+
+  private val lifecycleDisposable = LifecycleDisposable()
 
   private lateinit var scene: ConstraintLayout
   private lateinit var input: EditText
@@ -66,6 +73,8 @@ class TextStoryPostTextEntryFragment : KeyboardEntryDialogFragment(
   private var allCapsFilter = InputFilter.AllCaps()
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+    requireDialog().window?.attributes?.windowAnimations = R.style.TextSecure_Animation_TextStoryPostEntryDialog
+
     initializeViews(view)
     initializeInput()
     initializeAlignmentButton()
@@ -104,21 +113,29 @@ class TextStoryPostTextEntryFragment : KeyboardEntryDialogFragment(
   }
 
   private fun initializeInput() {
+    TextStoryTextWatcher.install(input)
+
     input.filters = input.filters + bufferFilter
     input.doOnTextChanged { _, _, _, _ ->
       presentHint()
     }
+    input.doAfterTextChanged { text ->
+      viewModel.setTemporaryBody(text?.toString() ?: "")
+    }
     input.setText(viewModel.getBody())
+    input.setIncognitoKeyboardEnabled(TextSecurePreferences.isIncognitoKeyboardEnabled(requireContext()))
   }
 
   private fun presentHint() {
     if (TextUtils.isEmpty(input.text)) {
+      input.alpha = 0.6f
       if (input.filters.contains(allCapsFilter)) {
-        input.hint = getString(R.string.TextStoryPostTextEntryFragment__add_text).toUpperCase(Locale.getDefault())
+        input.hint = getString(R.string.TextStoryPostTextEntryFragment__add_text).uppercase(Locale.getDefault())
       } else {
         input.setHint(R.string.TextStoryPostTextEntryFragment__add_text)
       }
     } else {
+      input.alpha = 1f
       input.hint = ""
     }
   }
@@ -200,11 +217,13 @@ class TextStoryPostTextEntryFragment : KeyboardEntryDialogFragment(
   }
 
   private fun initializeViewModel() {
-    viewModel.typeface.observe(viewLifecycleOwner) { typeface ->
+    lifecycleDisposable.bindTo(viewLifecycleOwner)
+
+    lifecycleDisposable += viewModel.typeface.subscribeBy { typeface ->
       input.typeface = typeface
     }
 
-    viewModel.state.observe(viewLifecycleOwner) { state ->
+    lifecycleDisposable += viewModel.state.subscribeBy { state ->
       input.setTextColor(state.textForegroundColor)
       input.setHintTextColor(state.textForegroundColor)
 

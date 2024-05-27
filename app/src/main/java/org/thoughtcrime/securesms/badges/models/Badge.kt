@@ -6,6 +6,8 @@ import android.os.Parcelable
 import android.view.View
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.compose.runtime.Stable
+import com.bumptech.glide.Glide
 import com.bumptech.glide.load.Key
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.load.resource.bitmap.DownsampleStrategy
@@ -13,7 +15,6 @@ import kotlinx.parcelize.Parcelize
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.badges.glide.BadgeSpriteTransformation
 import org.thoughtcrime.securesms.components.settings.PreferenceModel
-import org.thoughtcrime.securesms.mms.GlideApp
 import org.thoughtcrime.securesms.util.ThemeUtil
 import org.thoughtcrime.securesms.util.adapter.mapping.LayoutFactory
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
@@ -25,6 +26,7 @@ typealias OnBadgeClicked = (Badge, Boolean, Boolean) -> Unit
 /**
  * A Badge that can be collected and displayed by a user.
  */
+@Stable
 @Parcelize
 data class Badge(
   val id: String,
@@ -35,10 +37,13 @@ data class Badge(
   val imageDensity: String,
   val expirationTimestamp: Long,
   val visible: Boolean,
+  val duration: Long
 ) : Parcelable, Key {
 
   fun isExpired(): Boolean = expirationTimestamp < System.currentTimeMillis() && expirationTimestamp > 0
   fun isBoost(): Boolean = id == BOOST_BADGE_ID
+  fun isGift(): Boolean = id == GIFT_BADGE_ID
+  fun isSubscription(): Boolean = !isBoost() && !isGift()
 
   override fun updateDiskCacheKey(messageDigest: MessageDigest) {
     messageDigest.update(id.toByteArray(Key.CHARSET))
@@ -125,12 +130,12 @@ data class Badge(
 
       badge.alpha = if (model.badge.isExpired() || model.isFaded) 0.5f else 1f
 
-      GlideApp.with(badge)
+      Glide.with(badge)
         .load(model.badge)
         .downsample(DownsampleStrategy.NONE)
         .diskCacheStrategy(DiskCacheStrategy.NONE)
         .transform(
-          BadgeSpriteTransformation(BadgeSpriteTransformation.Size.BADGE_64, model.badge.imageDensity, ThemeUtil.isDarkTheme(context)),
+          BadgeSpriteTransformation(BadgeSpriteTransformation.Size.BADGE_64, model.badge.imageDensity, ThemeUtil.isDarkTheme(context))
         )
         .into(badge)
 
@@ -162,6 +167,7 @@ data class Badge(
 
   companion object {
     const val BOOST_BADGE_ID = "BOOST"
+    const val GIFT_BADGE_ID = "GIFT"
 
     private val SELECTION_CHANGED = Any()
 

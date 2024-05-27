@@ -1,32 +1,41 @@
 package org.thoughtcrime.securesms;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewTreeObserver;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
-import androidx.lifecycle.Transformations;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import org.signal.core.util.concurrent.LifecycleDisposable;
+import org.signal.donations.StripeApi;
+import org.thoughtcrime.securesms.components.DebugLogsPromptDialogFragment;
+import org.thoughtcrime.securesms.components.PromptBatterySaverDialogFragment;
+import org.thoughtcrime.securesms.components.settings.app.AppSettingsActivity;
 import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaController;
 import org.thoughtcrime.securesms.components.voice.VoiceNoteMediaControllerOwner;
-import org.thoughtcrime.securesms.devicetransfer.olddevice.OldDeviceTransferLockedDialog;
+import org.thoughtcrime.securesms.conversationlist.RelinkDevicesReminderBottomSheetFragment;
+import org.thoughtcrime.securesms.devicetransfer.olddevice.OldDeviceExitActivity;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
-import org.thoughtcrime.securesms.stories.Stories;
+import org.thoughtcrime.securesms.net.DeviceTransferBlockingInterceptor;
+import org.thoughtcrime.securesms.notifications.VitalsViewModel;
 import org.thoughtcrime.securesms.stories.tabs.ConversationListTabRepository;
-import org.thoughtcrime.securesms.stories.tabs.ConversationListTabsState;
 import org.thoughtcrime.securesms.stories.tabs.ConversationListTabsViewModel;
 import org.thoughtcrime.securesms.util.AppStartup;
 import org.thoughtcrime.securesms.util.CachedInflater;
 import org.thoughtcrime.securesms.util.CommunicationActions;
 import org.thoughtcrime.securesms.util.DynamicNoActionBarTheme;
 import org.thoughtcrime.securesms.util.DynamicTheme;
-import org.thoughtcrime.securesms.util.FeatureFlags;
+import org.thoughtcrime.securesms.util.SplashScreenUtil;
 import org.thoughtcrime.securesms.util.WindowUtil;
 
 public class MainActivity extends PassphraseRequiredActivity implements VoiceNoteMediaControllerOwner {
@@ -38,6 +47,11 @@ public class MainActivity extends PassphraseRequiredActivity implements VoiceNot
 
   private VoiceNoteMediaController      mediaController;
   private ConversationListTabsViewModel conversationListTabsViewModel;
+  private VitalsViewModel               vitalsViewModel;
+
+  private final LifecycleDisposable lifecycleDisposable = new LifecycleDisposable();
+
+  private boolean onFirstRender = false;
 
   public static @NonNull Intent clearTop(@NonNull Context context) {
     Intent intent = new Intent(context, MainActivity.class);
@@ -55,34 +69,58 @@ public class MainActivity extends PassphraseRequiredActivity implements VoiceNot
     super.onCreate(savedInstanceState, ready);
 
     setContentView(R.layout.main_activity);
+    final View content = findViewById(android.R.id.content);
+    content.getViewTreeObserver().addOnPreDrawListener(
+        new ViewTreeObserver.OnPreDrawListener() {
+          @Override
+          public boolean onPreDraw() {
+            // Use pre draw listener to delay drawing frames till conversation list is ready
+            if (onFirstRender) {
+              content.getViewTreeObserver().removeOnPreDrawListener(this);
+              return true;
+            } else {
+              return false;
+            }
+          }
+        });
 
-    mediaController = new VoiceNoteMediaController(this);
+    lifecycleDisposable.bindTo(this);
+
+    mediaController = new VoiceNoteMediaController(this, true);
 
     ConversationListTabRepository         repository = new ConversationListTabRepository();
     ConversationListTabsViewModel.Factory factory    = new ConversationListTabsViewModel.Factory(repository);
 
-    navigator.onCreate(savedInstanceState);
-
-    handleGroupLinkInIntent(getIntent());
-    handleProxyInIntent(getIntent());
-    handleSignalMeIntent(getIntent());
+    handleDeeplinkIntent(getIntent());
 
     CachedInflater.from(this).clear();
 
     conversationListTabsViewModel = new ViewModelProvider(this, factory).get(ConversationListTabsViewModel.class);
-    Transformations.distinctUntilChanged(Transformations.map(conversationListTabsViewModel.getState(), ConversationListTabsState::getTab))
-                   .observe(this, tab -> {
-                     switch (tab) {
-                       case CHATS:
-                         getSupportFragmentManager().popBackStack();
-                         break;
-                       case STORIES:
-                         navigator.goToStories();
-                         break;
-                     }
-                   });
-
     updateTabVisibility();
+
+    vitalsViewModel = new ViewModelProvider(this).get(VitalsViewModel.class);
+
+    lifecycleDisposable.add(
+        vitalsViewModel
+            .getVitalsState()
+            .subscribe(this::presentVitalsState)
+    );
+  }
+
+  @SuppressLint("NewApi")
+  private void presentVitalsState(VitalsViewModel.State state) {
+    switch (state) {
+      case NONE:
+        break;
+      case PROMPT_BATTERY_SAVER_DIALOG:
+        PromptBatterySaverDialogFragment.show(getSupportFragmentManager());
+        break;
+      case PROMPT_DEBUGLOGS_FOR_NOTIFICATIONS:
+        DebugLogsPromptDialogFragment.show(this, DebugLogsPromptDialogFragment.Purpose.NOTIFICATIONS);
+      case PROMPT_DEBUGLOGS_FOR_CRASH:
+        DebugLogsPromptDialogFragment.show(this, DebugLogsPromptDialogFragment.Purpose.CRASH);
+        break;
+    }
   }
 
   @Override
@@ -95,9 +133,7 @@ public class MainActivity extends PassphraseRequiredActivity implements VoiceNot
   @Override
   protected void onNewIntent(Intent intent) {
     super.onNewIntent(intent);
-    handleGroupLinkInIntent(intent);
-    handleProxyInIntent(intent);
-    handleSignalMeIntent(intent);
+    handleDeeplinkIntent(intent);
   }
 
   @Override
@@ -111,10 +147,32 @@ public class MainActivity extends PassphraseRequiredActivity implements VoiceNot
     super.onResume();
     dynamicTheme.onResume(this);
     if (SignalStore.misc().isOldDeviceTransferLocked()) {
-      OldDeviceTransferLockedDialog.show(getSupportFragmentManager());
+      new MaterialAlertDialogBuilder(this)
+          .setTitle(R.string.OldDeviceTransferLockedDialog__complete_registration_on_your_new_device)
+          .setMessage(R.string.OldDeviceTransferLockedDialog__your_signal_account_has_been_transferred_to_your_new_device)
+          .setPositiveButton(R.string.OldDeviceTransferLockedDialog__done, (d, w) -> OldDeviceExitActivity.exit(this))
+          .setNegativeButton(R.string.OldDeviceTransferLockedDialog__cancel_and_activate_this_device, (d, w) -> {
+            SignalStore.misc().setOldDeviceTransferLocked(false);
+            DeviceTransferBlockingInterceptor.getInstance().unblockNetwork();
+          })
+          .setCancelable(false)
+          .show();
+    }
+
+    if (SignalStore.misc().getShouldShowLinkedDevicesReminder()) {
+      SignalStore.misc().setShouldShowLinkedDevicesReminder(false);
+      RelinkDevicesReminderBottomSheetFragment.show(getSupportFragmentManager());
     }
 
     updateTabVisibility();
+
+    vitalsViewModel.checkSlowNotificationHeuristics();
+  }
+
+  @Override
+  protected void onStop() {
+    super.onStop();
+    SplashScreenUtil.setSplashScreenThemeIfNecessary(this, SignalStore.settings().getTheme());
   }
 
   @Override
@@ -133,18 +191,20 @@ public class MainActivity extends PassphraseRequiredActivity implements VoiceNot
   }
 
   private void updateTabVisibility() {
-    if (Stories.isFeatureEnabled()) {
-      findViewById(R.id.conversation_list_tabs).setVisibility(View.VISIBLE);
-      WindowUtil.setNavigationBarColor(getWindow(), ContextCompat.getColor(this, R.color.signal_background_secondary));
-    } else {
-      findViewById(R.id.conversation_list_tabs).setVisibility(View.GONE);
-      WindowUtil.setNavigationBarColor(getWindow(), ContextCompat.getColor(this, R.color.signal_background_primary));
-      navigator.goToChats();
-    }
+    findViewById(R.id.conversation_list_tabs).setVisibility(View.VISIBLE);
+    WindowUtil.setNavigationBarColor(this, ContextCompat.getColor(this, R.color.signal_colorSurface2));
   }
 
   public @NonNull MainNavigator getNavigator() {
     return navigator;
+  }
+
+  private void handleDeeplinkIntent(Intent intent) {
+    handleGroupLinkInIntent(intent);
+    handleProxyInIntent(intent);
+    handleSignalMeIntent(intent);
+    handleCallLinkInIntent(intent);
+    handleDonateReturnIntent(intent);
   }
 
   private void handleGroupLinkInIntent(Intent intent) {
@@ -166,6 +226,24 @@ public class MainActivity extends PassphraseRequiredActivity implements VoiceNot
     if (data != null) {
       CommunicationActions.handlePotentialSignalMeUrl(this, data.toString());
     }
+  }
+
+  private void handleCallLinkInIntent(Intent intent) {
+    Uri data = intent.getData();
+    if (data != null) {
+      CommunicationActions.handlePotentialCallLinkUrl(this, data.toString());
+    }
+  }
+
+  private void handleDonateReturnIntent(Intent intent) {
+    Uri data = intent.getData();
+    if (data != null && data.toString().startsWith(StripeApi.RETURN_URL_IDEAL)) {
+      startActivity(AppSettingsActivity.manageSubscriptions(this));
+    }
+  }
+
+  public void onFirstRender() {
+    onFirstRender = true;
   }
 
   @Override

@@ -2,11 +2,16 @@ package org.thoughtcrime.securesms.jobmanager.impl;
 
 import android.app.Application;
 import android.app.job.JobInfo;
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import org.thoughtcrime.securesms.jobmanager.Constraint;
+import org.thoughtcrime.securesms.util.NetworkUtil;
 
 public class NetworkConstraint implements Constraint {
 
@@ -39,8 +44,8 @@ public class NetworkConstraint implements Constraint {
     return "NETWORK";
   }
 
-  public static boolean isMet(@NonNull Application application) {
-    return NetworkConstraintObserver.getInstance(application).hasInternet();
+  public static boolean isMet(@NonNull Context context) {
+    return NetworkUtil.isConnected(context);
   }
 
   public static final class Factory implements Constraint.Factory<NetworkConstraint> {

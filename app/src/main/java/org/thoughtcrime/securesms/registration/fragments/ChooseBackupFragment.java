@@ -15,16 +15,13 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.core.text.HtmlCompat;
 import androidx.navigation.Navigation;
 
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.LoggingFragment;
 import org.thoughtcrime.securesms.R;
-import org.thoughtcrime.securesms.database.documents.Document;
 import org.thoughtcrime.securesms.keyvalue.SignalStore;
-import org.thoughtcrime.securesms.util.BackupUtil;
 import org.thoughtcrime.securesms.util.navigation.SafeNavigation;
 
 public class ChooseBackupFragment extends LoggingFragment {
@@ -62,7 +59,6 @@ public class ChooseBackupFragment extends LoggingFragment {
     }
   }
 
-  @RequiresApi(21)
   private void onChooseBackupSelected(@NonNull View view) {
     Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
 

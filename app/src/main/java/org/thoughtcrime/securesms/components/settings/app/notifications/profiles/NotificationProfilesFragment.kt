@@ -5,10 +5,10 @@ import android.view.View
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import org.signal.core.util.concurrent.LifecycleDisposable
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.emoji.EmojiUtil
 import org.thoughtcrime.securesms.components.settings.DSLConfiguration
-import org.thoughtcrime.securesms.components.settings.DSLSettingsAdapter
 import org.thoughtcrime.securesms.components.settings.DSLSettingsFragment
 import org.thoughtcrime.securesms.components.settings.DSLSettingsIcon
 import org.thoughtcrime.securesms.components.settings.DSLSettingsText
@@ -17,11 +17,9 @@ import org.thoughtcrime.securesms.components.settings.app.notifications.profiles
 import org.thoughtcrime.securesms.components.settings.app.notifications.profiles.models.NotificationProfilePreference
 import org.thoughtcrime.securesms.components.settings.configure
 import org.thoughtcrime.securesms.components.settings.conversation.preferences.LargeIconClickPreference
-import org.thoughtcrime.securesms.dependencies.ApplicationDependencies
-import org.thoughtcrime.securesms.megaphone.Megaphones
 import org.thoughtcrime.securesms.notifications.profiles.NotificationProfile
 import org.thoughtcrime.securesms.notifications.profiles.NotificationProfiles
-import org.thoughtcrime.securesms.util.LifecycleDisposable
+import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
 import org.thoughtcrime.securesms.util.navigation.safeNavigate
 
 /**
@@ -37,11 +35,6 @@ class NotificationProfilesFragment : DSLSettingsFragment() {
   private val lifecycleDisposable = LifecycleDisposable()
   private var toolbar: Toolbar? = null
 
-  override fun onCreate(savedInstanceState: Bundle?) {
-    super.onCreate(savedInstanceState)
-    ApplicationDependencies.getMegaphoneRepository().markFinished(Megaphones.Event.NOTIFICATION_PROFILES)
-  }
-
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
@@ -55,7 +48,7 @@ class NotificationProfilesFragment : DSLSettingsFragment() {
     toolbar = null
   }
 
-  override fun bindAdapter(adapter: DSLSettingsAdapter) {
+  override fun bindAdapter(adapter: MappingAdapter) {
     NoNotificationProfiles.register(adapter)
     LargeIconClickPreference.register(adapter)
     NotificationProfilePreference.register(adapter)

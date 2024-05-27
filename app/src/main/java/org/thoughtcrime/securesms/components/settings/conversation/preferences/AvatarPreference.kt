@@ -28,7 +28,7 @@ object AvatarPreference {
   class Model(
     val recipient: Recipient,
     val storyViewState: StoryViewState,
-    val onAvatarClick: (View) -> Unit,
+    val onAvatarClick: (AvatarView) -> Unit,
     val onBadgeClick: (Badge) -> Unit
   ) : PreferenceModel<Model>() {
     override fun areItemsTheSame(newItem: Model): Boolean {
@@ -36,7 +36,9 @@ object AvatarPreference {
     }
 
     override fun areContentsTheSame(newItem: Model): Boolean {
-      return super.areContentsTheSame(newItem) && recipient.hasSameContent(newItem.recipient)
+      return super.areContentsTheSame(newItem) &&
+        recipient.hasSameContent(newItem.recipient) &&
+        storyViewState == newItem.storyViewState
     }
   }
 
@@ -73,8 +75,7 @@ object AvatarPreference {
   }
 
   private class AvatarPreferenceFallbackPhotoProvider : Recipient.FallbackPhotoProvider() {
-    override fun getPhotoForGroup(): FallbackContactPhoto {
-      return FallbackPhoto(R.drawable.ic_group_outline_40, ViewUtil.dpToPx(8))
-    }
+    override val photoForGroup: FallbackContactPhoto
+      get() = FallbackPhoto(R.drawable.ic_group_outline_40, ViewUtil.dpToPx(8))
   }
 }

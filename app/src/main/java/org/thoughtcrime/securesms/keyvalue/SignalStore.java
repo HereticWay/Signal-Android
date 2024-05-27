@@ -19,7 +19,7 @@ public final class SignalStore {
   private KeyValueStore store;
 
   private final AccountValues             accountValues;
-  private final KbsValues                 kbsValues;
+  private final SvrValues                 svrValues;
   private final RegistrationValues        registrationValues;
   private final PinValues                 pinValues;
   private final RemoteConfigValues        remoteConfigValues;
@@ -43,6 +43,10 @@ public final class SignalStore {
   private final NotificationProfileValues notificationProfileValues;
   private final ReleaseChannelValues      releaseChannelValues;
   private final StoryValues               storyValues;
+  private final ApkUpdateValues           apkUpdate;
+  private final BackupValues              backupValues;
+
+  private final PlainTextSharedPrefsDataStore plainTextValues;
 
   private static volatile SignalStore instance;
 
@@ -61,7 +65,7 @@ public final class SignalStore {
   private SignalStore(@NonNull KeyValueStore store) {
     this.store                     = store;
     this.accountValues             = new AccountValues(store);
-    this.kbsValues                 = new KbsValues(store);
+    this.svrValues                 = new SvrValues(store);
     this.registrationValues        = new RegistrationValues(store);
     this.pinValues                 = new PinValues(store);
     this.remoteConfigValues        = new RemoteConfigValues(store);
@@ -85,11 +89,14 @@ public final class SignalStore {
     this.notificationProfileValues = new NotificationProfileValues(store);
     this.releaseChannelValues      = new ReleaseChannelValues(store);
     this.storyValues               = new StoryValues(store);
+    this.apkUpdate                 = new ApkUpdateValues(store);
+    this.backupValues              = new BackupValues(store);
+    this.plainTextValues           = new PlainTextSharedPrefsDataStore(ApplicationDependencies.getApplication());
   }
 
   public static void onFirstEverAppLaunch() {
     account().onFirstEverAppLaunch();
-    kbsValues().onFirstEverAppLaunch();
+    svr().onFirstEverAppLaunch();
     registrationValues().onFirstEverAppLaunch();
     pinValues().onFirstEverAppLaunch();
     remoteConfigValues().onFirstEverAppLaunch();
@@ -118,7 +125,7 @@ public final class SignalStore {
   public static List<String> getKeysToIncludeInBackup() {
     List<String> keys = new ArrayList<>();
     keys.addAll(account().getKeysToIncludeInBackup());
-    keys.addAll(kbsValues().getKeysToIncludeInBackup());
+    keys.addAll(svr().getKeysToIncludeInBackup());
     keys.addAll(registrationValues().getKeysToIncludeInBackup());
     keys.addAll(pinValues().getKeysToIncludeInBackup());
     keys.addAll(remoteConfigValues().getKeysToIncludeInBackup());
@@ -165,8 +172,8 @@ public final class SignalStore {
     return getInstance().accountValues;
   }
 
-  public static @NonNull KbsValues kbsValues() {
-    return getInstance().kbsValues;
+  public static @NonNull SvrValues svr() {
+    return getInstance().svrValues;
   }
 
   public static @NonNull RegistrationValues registrationValues() {
@@ -261,12 +268,24 @@ public final class SignalStore {
     return getInstance().storyValues;
   }
 
-  public static @NonNull GroupsV2AuthorizationSignalStoreCache groupsV2AuthorizationCache() {
-    return new GroupsV2AuthorizationSignalStoreCache(getStore());
+  public static @NonNull ApkUpdateValues apkUpdate() {
+    return getInstance().apkUpdate;
+  }
+
+  public static @NonNull BackupValues backup() {
+    return getInstance().backupValues;
+  }
+
+  public static @NonNull GroupsV2AuthorizationSignalStoreCache groupsV2AciAuthorizationCache() {
+    return GroupsV2AuthorizationSignalStoreCache.createAciCache(getStore());
   }
 
   public static @NonNull PreferenceDataStore getPreferenceDataStore() {
     return new SignalPreferenceDataStore(getStore());
+  }
+
+  public static @NonNull PlainTextSharedPrefsDataStore plaintext() {
+    return getInstance().plainTextValues;
   }
 
   /**
@@ -287,5 +306,10 @@ public final class SignalStore {
   @VisibleForTesting
   public static void inject(@NonNull KeyValueStore store) {
     instance = new SignalStore(store);
+  }
+
+  public static void clearAllDataForBackupRestore() {
+    releaseChannelValues().clearReleaseChannelRecipientId();
+    account().clearRegistrationButKeepCredentials();
   }
 }

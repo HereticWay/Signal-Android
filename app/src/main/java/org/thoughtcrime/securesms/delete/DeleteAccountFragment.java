@@ -37,7 +37,9 @@ import org.thoughtcrime.securesms.components.LabeledEditText;
 import org.thoughtcrime.securesms.util.SpanUtil;
 import org.thoughtcrime.securesms.util.ViewUtil;
 import org.thoughtcrime.securesms.util.text.AfterTextChanged;
-import org.whispersystems.libsignal.util.guava.Optional;
+
+import java.util.Optional;
+
 
 public class DeleteAccountFragment extends Fragment {
 
@@ -83,13 +85,13 @@ public class DeleteAccountFragment extends Fragment {
   }
 
   private @NonNull CharSequence buildBulletsText(@NonNull Optional<String> formattedBalance) {
-    SpannableStringBuilder builder =  new SpannableStringBuilder().append(SpanUtil.bullet(getString(R.string.DeleteAccountFragment__delete_your_account_info_and_profile_photo)))
+    SpannableStringBuilder builder =  new SpannableStringBuilder().append(SpanUtil.bullet(getString(R.string.DeleteAccountFragment__delete_your_account_info_and_profile_photo),8))
                                                                   .append("\n")
-                                                                  .append(SpanUtil.bullet(getString(R.string.DeleteAccountFragment__delete_all_your_messages)));
+                                                                  .append(SpanUtil.bullet(getString(R.string.DeleteAccountFragment__delete_all_your_messages),8));
 
     if (formattedBalance.isPresent()) {
       builder.append("\n");
-      builder.append(SpanUtil.bullet(getString(R.string.DeleteAccountFragment__delete_s_in_your_payments_account, formattedBalance.get())));
+      builder.append(SpanUtil.bullet(getString(R.string.DeleteAccountFragment__delete_s_in_your_payments_account, formattedBalance.get()),8));
     }
 
     return builder;
@@ -222,20 +224,20 @@ public class DeleteAccountFragment extends Fragment {
   private void handleEvent(@NonNull DeleteAccountEvent deleteAccountEvent) {
     switch (deleteAccountEvent.getType()) {
       case NO_COUNTRY_CODE:
-        Snackbar.make(requireView(), R.string.DeleteAccountFragment__no_country_code, Snackbar.LENGTH_SHORT).setTextColor(Color.WHITE).show();
+        Snackbar.make(requireView(), R.string.DeleteAccountFragment__no_country_code, Snackbar.LENGTH_SHORT).show();
         break;
       case NO_NATIONAL_NUMBER:
-        Snackbar.make(requireView(), R.string.DeleteAccountFragment__no_number, Snackbar.LENGTH_SHORT).setTextColor(Color.WHITE).show();
+        Snackbar.make(requireView(), R.string.DeleteAccountFragment__no_number, Snackbar.LENGTH_SHORT).show();
         break;
       case NOT_A_MATCH:
-        new AlertDialog.Builder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext())
                        .setMessage(R.string.DeleteAccountFragment__the_phone_number)
                        .setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss())
                        .setCancelable(true)
                        .show();
         break;
       case CONFIRM_DELETION:
-        new AlertDialog.Builder(requireContext())
+        new MaterialAlertDialogBuilder(requireContext())
                        .setTitle(R.string.DeleteAccountFragment__are_you_sure)
                        .setMessage(R.string.DeleteAccountFragment__this_will_delete_your_signal_account)
                        .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())
@@ -287,7 +289,7 @@ public class DeleteAccountFragment extends Fragment {
   }
 
   private void showLocalDataDeletionFailedDialog() {
-    new AlertDialog.Builder(requireContext())
+    new MaterialAlertDialogBuilder(requireContext())
                    .setMessage(R.string.DeleteAccountFragment__failed_to_delete_local_data)
                    .setPositiveButton(R.string.DeleteAccountFragment__launch_app_settings, (dialog, which) -> {
                      Intent settingsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);

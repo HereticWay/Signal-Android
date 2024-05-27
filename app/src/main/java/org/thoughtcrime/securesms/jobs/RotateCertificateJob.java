@@ -1,10 +1,10 @@
 package org.thoughtcrime.securesms.jobs;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
-import org.thoughtcrime.securesms.jobmanager.Data;
 import org.thoughtcrime.securesms.jobmanager.Job;
 import org.thoughtcrime.securesms.jobmanager.impl.NetworkConstraint;
 import org.thoughtcrime.securesms.keyvalue.CertificateType;
@@ -36,8 +36,8 @@ public final class RotateCertificateJob extends BaseJob {
   }
 
   @Override
-  public @NonNull Data serialize() {
-    return Data.EMPTY;
+  public @Nullable byte[] serialize() {
+    return null;
   }
 
   @Override
@@ -66,9 +66,9 @@ public final class RotateCertificateJob extends BaseJob {
         byte[] certificate;
 
         switch (certificateType) {
-          case UUID_AND_E164: certificate = accountManager.getSenderCertificate(); break;
-          case UUID_ONLY    : certificate = accountManager.getSenderCertificateForPhoneNumberPrivacy(); break;
-          default           : throw new AssertionError();
+          case ACI_AND_E164: certificate = accountManager.getSenderCertificate(); break;
+          case ACI_ONLY    : certificate = accountManager.getSenderCertificateForPhoneNumberPrivacy(); break;
+          default          : throw new AssertionError();
         }
 
         Log.i(TAG, String.format("Successfully got %s certificate", certificateType));
@@ -90,7 +90,7 @@ public final class RotateCertificateJob extends BaseJob {
 
   public static final class Factory implements Job.Factory<RotateCertificateJob> {
     @Override
-    public @NonNull RotateCertificateJob create(@NonNull Parameters parameters, @NonNull Data data) {
+    public @NonNull RotateCertificateJob create(@NonNull Parameters parameters, @Nullable byte[] serializedData) {
       return new RotateCertificateJob(parameters);
     }
   }

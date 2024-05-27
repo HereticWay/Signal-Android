@@ -9,16 +9,17 @@ import com.google.android.flexbox.FlexboxLayoutManager
 import com.google.android.flexbox.JustifyContent
 import org.signal.core.util.DimensionUnit
 import org.signal.core.util.logging.Log
+import org.signal.libsignal.protocol.util.Pair
 import org.thoughtcrime.securesms.BuildConfig
 import org.thoughtcrime.securesms.badges.models.Badge
 import org.thoughtcrime.securesms.badges.models.Badge.Category.Companion.fromCode
 import org.thoughtcrime.securesms.components.settings.DSLConfiguration
 import org.thoughtcrime.securesms.database.model.databaseprotos.BadgeList
 import org.thoughtcrime.securesms.util.ScreenDensity
-import org.whispersystems.libsignal.util.Pair
 import org.whispersystems.signalservice.api.profiles.SignalServiceProfile
 import java.math.BigDecimal
 import java.sql.Timestamp
+import java.util.concurrent.TimeUnit
 
 object Badges {
 
@@ -93,22 +94,23 @@ object Badges {
       Uri.parse(badge.imageUrl),
       badge.imageDensity,
       badge.expiration,
-      badge.visible
+      badge.visible,
+      0L
     )
   }
 
   @JvmStatic
   fun toDatabaseBadge(badge: Badge): BadgeList.Badge {
-    return BadgeList.Badge.newBuilder()
-      .setId(badge.id)
-      .setCategory(badge.category.code)
-      .setDescription(badge.description)
-      .setExpiration(badge.expirationTimestamp)
-      .setVisible(badge.visible)
-      .setName(badge.name)
-      .setImageUrl(badge.imageUrl.toString())
-      .setImageDensity(badge.imageDensity)
-      .build()
+    return BadgeList.Badge(
+      id = badge.id,
+      category = badge.category.code,
+      description = badge.description,
+      expiration = badge.expirationTimestamp,
+      visible = badge.visible,
+      name = badge.name,
+      imageUrl = badge.imageUrl.toString(),
+      imageDensity = badge.imageDensity
+    )
   }
 
   @JvmStatic
@@ -122,7 +124,8 @@ object Badges {
       uriAndDensity.first(),
       uriAndDensity.second(),
       serviceBadge.expiration?.let { getTimestamp(it) } ?: 0,
-      serviceBadge.isVisible
+      serviceBadge.isVisible,
+      TimeUnit.SECONDS.toMillis(serviceBadge.duration)
     )
   }
 }

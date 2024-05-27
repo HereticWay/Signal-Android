@@ -1,18 +1,18 @@
 package org.thoughtcrime.securesms.components.settings.app.notifications.profiles
 
-import android.graphics.Color
 import android.os.Bundle
 import android.view.View
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
-import com.dd.CircularProgressButton
 import com.google.android.material.snackbar.Snackbar
 import io.reactivex.rxjava3.kotlin.subscribeBy
+import org.signal.core.util.concurrent.LifecycleDisposable
+import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.components.settings.DSLConfiguration
-import org.thoughtcrime.securesms.components.settings.DSLSettingsAdapter
 import org.thoughtcrime.securesms.components.settings.DSLSettingsFragment
+import org.thoughtcrime.securesms.components.settings.DSLSettingsIcon
+import org.thoughtcrime.securesms.components.settings.DSLSettingsText
 import org.thoughtcrime.securesms.components.settings.app.notifications.profiles.models.NotificationProfileAddMembers
 import org.thoughtcrime.securesms.components.settings.app.notifications.profiles.models.NotificationProfileRecipient
 import org.thoughtcrime.securesms.components.settings.configure
@@ -20,8 +20,9 @@ import org.thoughtcrime.securesms.components.settings.conversation.preferences.R
 import org.thoughtcrime.securesms.notifications.profiles.NotificationProfile
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
-import org.thoughtcrime.securesms.util.LifecycleDisposable
+import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
 import org.thoughtcrime.securesms.util.navigation.safeNavigate
+import org.thoughtcrime.securesms.util.views.CircularProgressMaterialButton
 
 /**
  * Show and allow addition of recipients to a profile during the create flow.
@@ -37,14 +38,14 @@ class AddAllowedMembersFragment : DSLSettingsFragment(layoutId = R.layout.fragme
 
     lifecycleDisposable.bindTo(viewLifecycleOwner.lifecycle)
 
-    view.findViewById<CircularProgressButton>(R.id.add_allowed_members_profile_next).apply {
+    view.findViewById<CircularProgressMaterialButton>(R.id.add_allowed_members_profile_next).apply {
       setOnClickListener {
         findNavController().safeNavigate(AddAllowedMembersFragmentDirections.actionAddAllowedMembersFragmentToEditNotificationProfileScheduleFragment(profileId, true))
       }
     }
   }
 
-  override fun bindAdapter(adapter: DSLSettingsAdapter) {
+  override fun bindAdapter(adapter: MappingAdapter) {
     NotificationProfileAddMembers.register(adapter)
     NotificationProfileRecipient.register(adapter)
 
@@ -87,8 +88,6 @@ class AddAllowedMembersFragment : DSLSettingsFragment(layoutId = R.layout.fragme
                     view?.let { view ->
                       Snackbar.make(view, getString(R.string.NotificationProfileDetails__s_removed, removed.getDisplayName(requireContext())), Snackbar.LENGTH_LONG)
                         .setAction(R.string.NotificationProfileDetails__undo) { undoRemove(id) }
-                        .setActionTextColor(ContextCompat.getColor(requireContext(), R.color.core_ultramarine_light))
-                        .setTextColor(Color.WHITE)
                         .show()
                     }
                   }
@@ -97,11 +96,41 @@ class AddAllowedMembersFragment : DSLSettingsFragment(layoutId = R.layout.fragme
           )
         )
       }
+
+      sectionHeaderPref(R.string.AddAllowedMembers__exceptions)
+
+      switchPref(
+        title = DSLSettingsText.from(R.string.AddAllowedMembers__allow_all_calls),
+        icon = DSLSettingsIcon.from(R.drawable.symbol_phone_24),
+        isChecked = profile.allowAllCalls,
+        onClick = {
+          lifecycleDisposable += viewModel.toggleAllowAllCalls()
+            .subscribeBy(
+              onError = { Log.w(TAG, "Error updating profile", it) }
+            )
+        }
+      )
+
+      switchPref(
+        title = DSLSettingsText.from(R.string.AddAllowedMembers__notify_for_all_mentions),
+        icon = DSLSettingsIcon.from(R.drawable.symbol_at_24),
+        isChecked = profile.allowAllMentions,
+        onClick = {
+          lifecycleDisposable += viewModel.toggleAllowAllMentions()
+            .subscribeBy(
+              onError = { Log.w(TAG, "Error updating profile", it) }
+            )
+        }
+      )
     }
   }
 
   private fun undoRemove(id: RecipientId) {
     lifecycleDisposable += viewModel.addMember(id)
       .subscribe()
+  }
+
+  companion object {
+    private val TAG = Log.tag(AddAllowedMembersFragment::class.java)
   }
 }

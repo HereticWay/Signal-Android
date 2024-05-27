@@ -1,6 +1,5 @@
 package org.thoughtcrime.securesms.mediasend;
 
-import android.annotation.TargetApi;
 import android.content.ContentUris;
 import android.content.Context;
 import android.database.Cursor;
@@ -22,13 +21,13 @@ import com.annimon.stream.Stream;
 import org.signal.core.util.concurrent.SignalExecutors;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.R;
+import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
 import org.thoughtcrime.securesms.mms.PartAuthority;
 import org.thoughtcrime.securesms.util.MediaUtil;
-import org.thoughtcrime.securesms.util.SqlUtil;
-import org.thoughtcrime.securesms.util.Stopwatch;
+import org.signal.core.util.SqlUtil;
+import org.signal.core.util.Stopwatch;
 import org.thoughtcrime.securesms.util.StorageUtil;
 import org.thoughtcrime.securesms.util.Util;
-import org.whispersystems.libsignal.util.guava.Optional;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,7 +37,11 @@ import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
+
+import io.reactivex.rxjava3.core.Single;
+import io.reactivex.rxjava3.schedulers.Schedulers;
 
 /**
  * Handles the retrieval of media present on the user's device.
@@ -59,6 +62,25 @@ public class MediaRepository {
     }
 
     SignalExecutors.BOUNDED.execute(() -> callback.onComplete(getFolders(context)));
+  }
+
+  /**
+   * Retrieves a list of recent media items (images and videos).
+   */
+  public Single<List<Media>> getRecentMedia() {
+    return Single.<List<Media>>fromCallable(() -> {
+                   if (!StorageUtil.canReadFromMediaStore()) {
+                     Log.w(TAG, "No storage permissions!", new Throwable());
+                     return Collections.emptyList();
+                   }
+
+                   return getMediaInBucket(ApplicationDependencies.getApplication(), Media.ALL_MEDIA_BUCKET_ID);
+                 })
+                 .onErrorReturn(t -> {
+                   Log.w(TAG, "Unable to get recent media", t);
+                   return Collections.emptyList();
+                 })
+                 .subscribeOn(Schedulers.io());
   }
 
   /**
@@ -97,7 +119,7 @@ public class MediaRepository {
   void getMostRecentItem(@NonNull Context context, @NonNull Callback<Optional<Media>> callback) {
     if (!StorageUtil.canReadFromMediaStore()) {
       Log.w(TAG, "No storage permissions!", new Throwable());
-      callback.onComplete(Optional.absent());
+      callback.onComplete(Optional.empty());
       return;
     }
 
@@ -253,7 +275,7 @@ public class MediaRepository {
         long   size        = cursor.getLong(cursor.getColumnIndexOrThrow(Images.Media.SIZE));
         long   duration    = !isImage ? cursor.getInt(cursor.getColumnIndexOrThrow(Video.Media.DURATION)) : 0;
 
-        media.add(fixMimeType(context, new Media(uri, mimetype, date, width, height, size, duration, false, false, Optional.of(bucketId), Optional.absent(), Optional.absent())));
+        media.add(fixMimeType(context, new Media(uri, mimetype, date, width, height, size, duration, false, false, Optional.of(bucketId), Optional.empty(), Optional.empty())));
       }
     }
 
@@ -305,17 +327,15 @@ public class MediaRepository {
   @WorkerThread
   private Optional<Media> getMostRecentItem(@NonNull Context context) {
     List<Media> media = getMediaInBucket(context, Media.ALL_MEDIA_BUCKET_ID, Images.Media.EXTERNAL_CONTENT_URI, true);
-    return media.size() > 0 ? Optional.of(media.get(0)) : Optional.absent();
+    return media.size() > 0 ? Optional.of(media.get(0)) : Optional.empty();
   }
 
-  @TargetApi(16)
   @SuppressWarnings("SuspiciousNameCombination")
   private String getWidthColumn(int orientation) {
     if (orientation == 0 || orientation == 180) return Images.Media.WIDTH;
     else                                        return Images.Media.HEIGHT;
   }
 
-  @TargetApi(16)
   @SuppressWarnings("SuspiciousNameCombination")
   private String getHeightColumn(int orientation) {
     if (orientation == 0 || orientation == 180) return Images.Media.HEIGHT;
@@ -332,7 +352,7 @@ public class MediaRepository {
     long size   = media.getSize();
 
     if (size <= 0) {
-      Optional<Long> optionalSize = Optional.fromNullable(PartAuthority.getAttachmentSize(context, media.getUri()));
+      Optional<Long> optionalSize = Optional.ofNullable(PartAuthority.getAttachmentSize(context, media.getUri()));
       size = optionalSize.isPresent() ? optionalSize.get() : 0;
     }
 
@@ -346,7 +366,7 @@ public class MediaRepository {
       height = dimens.second;
     }
 
-    return new Media(media.getUri(), media.getMimeType(), media.getDate(), width, height, size, 0, media.isBorderless(), media.isVideoGif(), media.getBucketId(), media.getCaption(), Optional.absent());
+    return new Media(media.getUri(), media.getMimeType(), media.getDate(), width, height, size, 0, media.isBorderless(), media.isVideoGif(), media.getBucketId(), media.getCaption(), Optional.empty());
   }
 
   private Media getContentResolverPopulatedMedia(@NonNull Context context, @NonNull Media media) throws IOException {
@@ -372,7 +392,7 @@ public class MediaRepository {
       height = dimens.second;
     }
 
-    return new Media(media.getUri(), media.getMimeType(), media.getDate(), width, height, size, 0, media.isBorderless(), media.isVideoGif(), media.getBucketId(), media.getCaption(), Optional.absent());
+    return new Media(media.getUri(), media.getMimeType(), media.getDate(), width, height, size, 0, media.isBorderless(), media.isVideoGif(), media.getBucketId(), media.getCaption(), Optional.empty());
   }
 
   @VisibleForTesting

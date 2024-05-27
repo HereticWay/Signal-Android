@@ -8,6 +8,7 @@ import android.view.Gravity
 import android.view.View
 import android.widget.PopupMenu
 import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
 import androidx.appcompat.widget.Toolbar
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
@@ -16,9 +17,11 @@ import androidx.fragment.app.viewModels
 import androidx.navigation.Navigation
 import androidx.recyclerview.widget.RecyclerView
 import org.signal.core.util.ThreadUtil
+import org.signal.core.util.getParcelableExtraCompat
 import org.thoughtcrime.securesms.R
 import org.thoughtcrime.securesms.avatar.Avatar
 import org.thoughtcrime.securesms.avatar.AvatarBundler
+import org.thoughtcrime.securesms.avatar.photo.PhotoEditorActivity
 import org.thoughtcrime.securesms.avatar.photo.PhotoEditorFragment
 import org.thoughtcrime.securesms.avatar.text.TextAvatarCreationFragment
 import org.thoughtcrime.securesms.avatar.vector.VectorAvatarCreationFragment
@@ -27,6 +30,8 @@ import org.thoughtcrime.securesms.components.recyclerview.GridDividerDecoration
 import org.thoughtcrime.securesms.groups.ParcelableGroupId
 import org.thoughtcrime.securesms.mediasend.AvatarSelectionActivity
 import org.thoughtcrime.securesms.mediasend.Media
+import org.thoughtcrime.securesms.mediasend.camerax.CameraXUtil
+import org.thoughtcrime.securesms.permissions.PermissionCompat
 import org.thoughtcrime.securesms.permissions.Permissions
 import org.thoughtcrime.securesms.util.ViewUtil
 import org.thoughtcrime.securesms.util.adapter.mapping.MappingAdapter
@@ -49,6 +54,7 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
   private val viewModel: AvatarPickerViewModel by viewModels(factoryProducer = this::createFactory)
 
   private lateinit var recycler: RecyclerView
+  private lateinit var photoEditorLauncher: ActivityResultLauncher<Avatar.Photo>
 
   private fun createFactory(): AvatarPickerViewModel.Factory {
     val args = AvatarPickerFragmentArgs.fromBundle(requireArguments())
@@ -81,21 +87,15 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
       }
 
       clearButton.visible = state.canClear
-
-      val wasEnabled = saveButton.isEnabled
-      saveButton.isEnabled = state.canSave
-      if (wasEnabled != state.canSave) {
-        val alpha = if (state.canSave) 1f else 0.5f
-        saveButton.animate().cancel()
-        saveButton.animate().alpha(alpha)
-      }
+      saveButton.isClickable = state.canSave
 
       val items = state.selectableAvatars.map { AvatarPickerItem.Model(it, it == state.currentAvatar) }
       val selectedPosition = items.indexOfFirst { it.isSelected }
 
       adapter.submitList(items) {
-        if (selectedPosition > -1)
+        if (selectedPosition > -1) {
           recycler.smoothScrollToPosition(selectedPosition)
+        }
       }
     }
 
@@ -104,6 +104,11 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
     photoButton.setOnIconClickedListener { openGallery() }
     textButton.setOnIconClickedListener { openTextEditor(null) }
     saveButton.setOnClickListener { v ->
+      if (!saveButton.isEnabled) {
+        return@setOnClickListener
+      }
+
+      saveButton.isEnabled = false
       viewModel.save(
         {
           setFragmentResult(
@@ -125,7 +130,7 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
         }
       )
     }
-    clearButton.setOnClickListener { viewModel.clear() }
+    clearButton.setOnClickListener { viewModel.clearAvatar() }
 
     setFragmentResultListener(TextAvatarCreationFragment.REQUEST_KEY_TEXT) { _, bundle ->
       val text = AvatarBundler.extractText(bundle)
@@ -137,9 +142,13 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
       viewModel.onAvatarEditCompleted(vector)
     }
 
-    setFragmentResultListener(PhotoEditorFragment.REQUEST_KEY_EDIT) { _, bundle ->
-      val photo = AvatarBundler.extractPhoto(bundle)
-      viewModel.onAvatarEditCompleted(photo)
+    setFragmentResultListener(PhotoEditorFragment.REQUEST_KEY_EDIT) { _, _ ->
+    }
+
+    photoEditorLauncher = registerForActivityResult(PhotoEditorActivity.Contract()) { photo ->
+      if (photo != null) {
+        viewModel.onAvatarEditCompleted(photo)
+      }
     }
   }
 
@@ -148,10 +157,10 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
     ViewUtil.hideKeyboard(requireContext(), requireView())
   }
 
-  @Suppress("DEPRECATION")
+  @Deprecated("Deprecated in Java")
   override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
     if (requestCode == REQUEST_CODE_SELECT_IMAGE && resultCode == Activity.RESULT_OK && data != null) {
-      val media: Media = requireNotNull(data.getParcelableExtra(AvatarSelectionActivity.EXTRA_MEDIA))
+      val media: Media = requireNotNull(data.getParcelableExtraCompat(AvatarSelectionActivity.EXTRA_MEDIA, Media::class.java))
       viewModel.onAvatarPhotoSelectionCompleted(media)
     } else {
       super.onActivityResult(requestCode, resultCode, data)
@@ -188,7 +197,7 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
     return true
   }
 
-  fun openEditor(avatar: Avatar) {
+  private fun openEditor(avatar: Avatar) {
     when (avatar) {
       is Avatar.Photo -> openPhotoEditor(avatar)
       is Avatar.Resource -> throw UnsupportedOperationException()
@@ -198,8 +207,7 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
   }
 
   private fun openPhotoEditor(photo: Avatar.Photo) {
-    Navigation.findNavController(requireView())
-      .safeNavigate(AvatarPickerFragmentDirections.actionAvatarPickerFragmentToAvatarPhotoEditorFragment(AvatarBundler.bundlePhoto(photo)))
+    photoEditorLauncher.launch(photo)
   }
 
   private fun openVectorEditor(vector: Avatar.Vector) {
@@ -215,24 +223,28 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
 
   @Suppress("DEPRECATION")
   private fun openCameraCapture() {
-    Permissions.with(this)
-      .request(Manifest.permission.CAMERA)
-      .ifNecessary()
-      .onAllGranted {
-        val intent = AvatarSelectionActivity.getIntentForCameraCapture(requireContext())
-        startActivityForResult(intent, REQUEST_CODE_SELECT_IMAGE)
-      }
-      .onAnyDenied {
-        Toast.makeText(requireContext(), R.string.AvatarSelectionBottomSheetDialogFragment__taking_a_photo_requires_the_camera_permission, Toast.LENGTH_SHORT)
-          .show()
-      }
-      .execute()
+    if (CameraXUtil.isSupported()) {
+      val intent = AvatarSelectionActivity.getIntentForCameraCapture(requireContext())
+      startActivityForResult(intent, REQUEST_CODE_SELECT_IMAGE)
+    } else {
+      Permissions.with(this)
+        .request(Manifest.permission.CAMERA)
+        .ifNecessary()
+        .onAllGranted {
+          val intent = AvatarSelectionActivity.getIntentForCameraCapture(requireContext())
+          startActivityForResult(intent, REQUEST_CODE_SELECT_IMAGE)
+        }
+        .withRationaleDialog(getString(R.string.CameraXFragment_allow_access_camera), getString(R.string.CameraXFragment_to_capture_photos_allow_camera), R.drawable.symbol_camera_24)
+        .withPermanentDenialDialog(getString(R.string.AvatarSelectionBottomSheetDialogFragment__taking_a_photo_requires_the_camera_permission), null, R.string.CameraXFragment_allow_access_camera, R.string.CameraXFragment_to_capture_photos, getParentFragmentManager())
+        .onAnyDenied { Toast.makeText(requireContext(), R.string.AvatarSelectionBottomSheetDialogFragment__taking_a_photo_requires_the_camera_permission, Toast.LENGTH_SHORT).show() }
+        .execute()
+    }
   }
 
   @Suppress("DEPRECATION")
   private fun openGallery() {
     Permissions.with(this)
-      .request(Manifest.permission.READ_EXTERNAL_STORAGE)
+      .request(*PermissionCompat.forImages())
       .ifNecessary()
       .onAllGranted {
         val intent = AvatarSelectionActivity.getIntentForGallery(requireContext())
@@ -245,6 +257,7 @@ class AvatarPickerFragment : Fragment(R.layout.avatar_picker_fragment) {
       .execute()
   }
 
+  @Deprecated("Deprecated in Java")
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     Permissions.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
   }

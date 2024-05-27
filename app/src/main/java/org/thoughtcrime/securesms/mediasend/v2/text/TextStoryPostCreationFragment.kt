@@ -1,29 +1,45 @@
 package org.thoughtcrime.securesms.mediasend.v2.text
 
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.view.View
-import androidx.appcompat.widget.AppCompatImageView
+import android.widget.Toast
 import androidx.constraintlayout.widget.ConstraintLayout
+import androidx.constraintlayout.widget.ConstraintSet
 import androidx.core.view.drawToBitmap
+import androidx.core.view.postDelayed
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.core.Flowable
+import io.reactivex.rxjava3.kotlin.subscribeBy
+import org.signal.core.util.concurrent.LifecycleDisposable
 import org.thoughtcrime.securesms.R
-import org.thoughtcrime.securesms.linkpreview.LinkPreviewRepository
-import org.thoughtcrime.securesms.linkpreview.LinkPreviewViewModel
+import org.thoughtcrime.securesms.contacts.paged.ContactSearchKey
+import org.thoughtcrime.securesms.conversation.mutiselect.forward.MultiselectForwardFragmentArgs
+import org.thoughtcrime.securesms.databinding.StoriesTextPostCreationFragmentBinding
+import org.thoughtcrime.securesms.linkpreview.LinkPreview
+import org.thoughtcrime.securesms.linkpreview.LinkPreviewState
+import org.thoughtcrime.securesms.linkpreview.LinkPreviewViewModelV2
+import org.thoughtcrime.securesms.mediasend.CameraDisplay
 import org.thoughtcrime.securesms.mediasend.v2.HudCommand
 import org.thoughtcrime.securesms.mediasend.v2.MediaSelectionViewModel
-import org.thoughtcrime.securesms.stories.StoryTextPostView
-import org.thoughtcrime.securesms.util.LifecycleDisposable
-import org.thoughtcrime.securesms.util.navigation.safeNavigate
+import org.thoughtcrime.securesms.mediasend.v2.stories.StoriesMultiselectForwardActivity
+import org.thoughtcrime.securesms.mediasend.v2.text.send.TextStoryPostSendRepository
+import org.thoughtcrime.securesms.mediasend.v2.text.send.TextStoryPostSendResult
+import org.thoughtcrime.securesms.safety.SafetyNumberBottomSheet
+import org.thoughtcrime.securesms.stories.Stories
+import org.thoughtcrime.securesms.util.activitySavedStateViewModel
+import org.thoughtcrime.securesms.util.visible
+import java.util.Optional
 
-class TextStoryPostCreationFragment : Fragment(R.layout.stories_text_post_creation_fragment), TextStoryPostTextEntryFragment.Callback {
+class TextStoryPostCreationFragment : Fragment(R.layout.stories_text_post_creation_fragment), TextStoryPostTextEntryFragment.Callback, SafetyNumberBottomSheet.Callbacks {
 
-  private lateinit var scene: ConstraintLayout
-  private lateinit var linkButton: View
-  private lateinit var backgroundButton: AppCompatImageView
-  private lateinit var send: View
-  private lateinit var storyTextPostView: StoryTextPostView
+  private var _binding: StoriesTextPostCreationFragmentBinding? = null
+  private val binding: StoriesTextPostCreationFragmentBinding get() = _binding!!
 
   private val sharedViewModel: MediaSelectionViewModel by viewModels(
     ownerProducer = {
@@ -34,30 +50,24 @@ class TextStoryPostCreationFragment : Fragment(R.layout.stories_text_post_creati
   private val viewModel: TextStoryPostCreationViewModel by viewModels(
     ownerProducer = {
       requireActivity()
+    },
+    factoryProducer = {
+      TextStoryPostCreationViewModel.Factory(TextStoryPostSendRepository())
     }
   )
 
-  private val linkPreviewViewModel: LinkPreviewViewModel by viewModels(
-    ownerProducer = {
-      requireActivity()
-    },
-    factoryProducer = {
-      LinkPreviewViewModel.Factory(LinkPreviewRepository())
-    }
-  )
+  private val linkPreviewViewModel: LinkPreviewViewModelV2 by activitySavedStateViewModel { handle ->
+    LinkPreviewViewModelV2(handle, enablePlaceholder = true)
+  }
 
   private val lifecycleDisposable = LifecycleDisposable()
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     super.onViewCreated(view, savedInstanceState)
 
-    scene = view.findViewById(R.id.scene)
-    linkButton = view.findViewById(R.id.add_link)
-    backgroundButton = view.findViewById(R.id.background_selector)
-    send = view.findViewById(R.id.send)
-    storyTextPostView = view.findViewById(R.id.story_text_post)
+    _binding = StoriesTextPostCreationFragmentBinding.bind(view)
 
-    storyTextPostView.showCloseButton()
+    binding.storyTextPost.enableCreationMode()
 
     lifecycleDisposable.bindTo(viewLifecycleOwner)
     lifecycleDisposable += sharedViewModel.hudCommands.subscribe {
@@ -66,60 +76,189 @@ class TextStoryPostCreationFragment : Fragment(R.layout.stories_text_post_creati
       }
     }
 
-    viewModel.typeface.observe(viewLifecycleOwner) { typeface ->
-      storyTextPostView.setTypeface(typeface)
+    lifecycleDisposable += viewModel.typeface.subscribeBy { typeface ->
+      binding.storyTextPost.setTypeface(typeface)
     }
 
-    viewModel.state.observe(viewLifecycleOwner) { state ->
-      backgroundButton.background = state.backgroundColor.chatBubbleMask
-      storyTextPostView.bindFromCreationState(state)
+    lifecycleDisposable += viewModel.state.subscribeBy { state ->
+      binding.backgroundSelector.background = state.backgroundColor.chatBubbleMask
+      binding.storyTextPost.bindFromCreationState(state)
 
       if (state.linkPreviewUri != null) {
-        linkPreviewViewModel.onTextChanged(requireContext(), state.linkPreviewUri, 0, state.linkPreviewUri.lastIndex)
+        linkPreviewViewModel.onTextChanged(state.linkPreviewUri, 0, state.linkPreviewUri.lastIndex)
       } else {
         linkPreviewViewModel.onSend()
       }
 
       val canSend = state.body.isNotEmpty() || !state.linkPreviewUri.isNullOrEmpty()
-      send.alpha = if (canSend) 1f else 0.5f
-      send.isEnabled = canSend
+      binding.send.alpha = if (canSend) 1f else 0.5f
+      binding.send.isEnabled = canSend
     }
 
-    linkPreviewViewModel.linkPreviewState.observe(viewLifecycleOwner) { state ->
-      storyTextPostView.bindLinkPreviewState(state, View.GONE)
-      storyTextPostView.postAdjustLinkPreviewTranslationY()
+    lifecycleDisposable += Flowable.combineLatest(viewModel.state, linkPreviewViewModel.linkPreviewState) { viewState, linkState ->
+      Pair(viewState.body.isBlank(), linkState)
+    }.subscribeBy { (useLargeThumb, linkState) ->
+      binding.storyTextPost.bindLinkPreviewState(linkState, View.GONE, useLargeThumb)
+      binding.storyTextPost.postAdjustLinkPreviewTranslationY()
     }
 
-    storyTextPostView.setTextViewClickListener {
-      storyTextPostView.hidePostContent()
+    binding.storyTextPost.setTextViewClickListener {
+      binding.storyTextPost.hidePostContent()
+      binding.storyTextPost.isEnabled = false
       TextStoryPostTextEntryFragment().show(childFragmentManager, null)
     }
 
-    backgroundButton.setOnClickListener {
+    binding.backgroundProtection.setOnClickListener {
       viewModel.cycleBackgroundColor()
     }
 
-    linkButton.setOnClickListener {
+    binding.addLinkProtection.setOnClickListener {
       TextStoryPostLinkEntryFragment().show(childFragmentManager, null)
     }
 
-    storyTextPostView.setLinkPreviewCloseListener {
+    binding.storyTextPost.setLinkPreviewCloseListener {
       viewModel.setLinkPreview("")
     }
 
-    send.setOnClickListener {
-      storyTextPostView.hideCloseButton()
-      viewModel.setBitmap(storyTextPostView.drawToBitmap())
-      findNavController().safeNavigate(R.id.action_textStoryPostCreationFragment_to_textStoryPostSendFragment)
+    val launcher = registerForActivityResult(StoriesMultiselectForwardActivity.SelectionContract()) {
+      if (it.isNotEmpty()) {
+        performSend(it.toSet())
+      } else {
+        binding.send.isClickable = true
+        binding.sendInProgressIndicator.visible = false
+      }
     }
+
+    binding.send.setOnClickListener {
+      binding.send.isClickable = false
+      binding.sendInProgressIndicator.visible = true
+
+      binding.storyTextPost.disableCreationMode()
+
+      val contacts = (sharedViewModel.destination.getRecipientSearchKeyList() + sharedViewModel.destination.getRecipientSearchKey())
+        .filterIsInstance(ContactSearchKey::class.java)
+        .toSet()
+
+      if (contacts.isEmpty()) {
+        val bitmap = binding.storyTextPost.drawToBitmap()
+        lifecycleDisposable += viewModel.compressToBlob(bitmap).observeOn(AndroidSchedulers.mainThread()).subscribe { uri ->
+          launcher.launch(
+            StoriesMultiselectForwardActivity.Args(
+              MultiselectForwardFragmentArgs(
+                title = R.string.MediaReviewFragment__send_to,
+                storySendRequirements = Stories.MediaTransform.SendRequirements.VALID_DURATION,
+                isSearchEnabled = false
+              ),
+              listOf(uri)
+            )
+          )
+        }
+      } else if (sharedViewModel.isAddToGroupStoryFlow) {
+        MaterialAlertDialogBuilder(requireContext())
+          .setMessage(getString(R.string.MediaReviewFragment__add_to_the_group_story, sharedViewModel.state.value!!.recipient!!.getDisplayName(requireContext())))
+          .setPositiveButton(R.string.MediaReviewFragment__add_to_story) { _, _ -> performSend(contacts) }
+          .setNegativeButton(android.R.string.cancel) { _, _ -> }
+          .show()
+      } else {
+        performSend(contacts)
+      }
+    }
+
+    initializeScenePositioning()
   }
 
   override fun onResume() {
     super.onResume()
-    storyTextPostView.showCloseButton()
+    binding.storyTextPost.enableCreationMode()
+    requireActivity().requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+  }
+
+  override fun onDestroy() {
+    super.onDestroy()
+    _binding = null
   }
 
   override fun onTextStoryPostTextEntryDismissed() {
-    storyTextPostView.showPostContent()
+    binding.storyTextPost.postDelayed(resources.getInteger(R.integer.text_entry_exit_duration).toLong()) {
+      binding.storyTextPost.showPostContent()
+      binding.storyTextPost.isEnabled = true
+    }
   }
+
+  private fun initializeScenePositioning() {
+    val cameraDisplay = CameraDisplay.getDisplay(requireActivity())
+
+    if (!cameraDisplay.roundViewFinderCorners) {
+      binding.storyTextPostCard.radius = 0f
+    }
+
+    binding.send.updateLayoutParams<ConstraintLayout.LayoutParams> {
+      bottomMargin = cameraDisplay.getToggleBottomMargin()
+    }
+
+    listOf(binding.backgroundProtection, binding.addLinkProtection).forEach {
+      it.updateLayoutParams<ConstraintLayout.LayoutParams> {
+        bottomMargin += cameraDisplay.getCameraCaptureMarginBottom(resources)
+      }
+    }
+
+    if (cameraDisplay.getCameraViewportGravity() == CameraDisplay.CameraViewportGravity.CENTER) {
+      val constraintSet = ConstraintSet()
+      constraintSet.clone(binding.scene)
+      constraintSet.connect(R.id.story_text_post_card, ConstraintSet.TOP, ConstraintSet.PARENT_ID, ConstraintSet.TOP)
+      constraintSet.applyTo(binding.scene)
+    } else {
+      binding.storyTextPostCard.updateLayoutParams<ConstraintLayout.LayoutParams> {
+        bottomMargin = cameraDisplay.getCameraViewportMarginBottom()
+      }
+    }
+  }
+
+  private fun performSend(contacts: Set<ContactSearchKey>) {
+    lifecycleDisposable += viewModel.send(
+      contacts = contacts,
+      getLinkPreview()
+    ).observeOn(AndroidSchedulers.mainThread()).subscribe { result ->
+      when (result) {
+        TextStoryPostSendResult.Success -> {
+          Toast.makeText(requireContext(), R.string.TextStoryPostCreationFragment__sent_story, Toast.LENGTH_SHORT).show()
+          requireActivity().finish()
+        }
+        TextStoryPostSendResult.Failure -> {
+          Toast.makeText(requireContext(), R.string.TextStoryPostCreationFragment__failed_to_send_story, Toast.LENGTH_SHORT).show()
+          requireActivity().finish()
+        }
+        is TextStoryPostSendResult.UntrustedRecordsError -> {
+          binding.send.isClickable = true
+          binding.sendInProgressIndicator.visible = false
+
+          SafetyNumberBottomSheet
+            .forIdentityRecordsAndDestinations(result.untrustedRecords, contacts.toList())
+            .show(childFragmentManager)
+        }
+      }
+    }
+  }
+
+  private fun getLinkPreview(): LinkPreview? {
+    val linkPreviewState: LinkPreviewState = linkPreviewViewModel.linkPreviewStateSnapshot
+
+    return if (linkPreviewState.linkPreview.isPresent) {
+      linkPreviewState.linkPreview.get()
+    } else if (!linkPreviewState.activeUrlForError.isNullOrEmpty()) {
+      LinkPreview(linkPreviewState.activeUrlForError, linkPreviewState.activeUrlForError, "", 0L, Optional.empty())
+    } else {
+      null
+    }
+  }
+
+  override fun sendAnywayAfterSafetyNumberChangedInBottomSheet(destinations: List<ContactSearchKey.RecipientSearchKey>) {
+    performSend(destinations.toSet())
+  }
+
+  override fun onMessageResentAfterSafetyNumberChangeInBottomSheet() {
+    error("Unsupported, we do not hand in a message id.")
+  }
+
+  override fun onCanceled() = Unit
 }

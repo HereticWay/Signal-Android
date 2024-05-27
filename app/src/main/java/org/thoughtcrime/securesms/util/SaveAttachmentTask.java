@@ -10,7 +10,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
-import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
@@ -18,13 +17,15 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import org.signal.core.util.MapUtil;
 import org.signal.core.util.StreamUtil;
 import org.signal.core.util.logging.Log;
+import org.signal.libsignal.protocol.util.Pair;
 import org.thoughtcrime.securesms.R;
 import org.thoughtcrime.securesms.mms.PartAuthority;
 import org.thoughtcrime.securesms.util.task.ProgressDialogAsyncTask;
-import org.whispersystems.libsignal.util.Pair;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -118,6 +119,12 @@ public class SaveAttachmentTask extends ProgressDialogAsyncTask<SaveAttachmentTa
     CreateMediaUriResult result       = createMediaUri(getMediaStoreContentUriForType(contentType), contentType, fileName);
     ContentValues        updateValues = new ContentValues();
 
+    final Uri mediaUri = result.mediaUri;
+
+    if (mediaUri == null) {
+      return null;
+    }
+
     try (InputStream inputStream = PartAuthority.getAttachmentStream(context, attachment.uri)) {
 
       if (inputStream == null) {
@@ -125,12 +132,12 @@ public class SaveAttachmentTask extends ProgressDialogAsyncTask<SaveAttachmentTa
       }
 
       if (Objects.equals(result.outputUri.getScheme(), ContentResolver.SCHEME_FILE)) {
-        try (OutputStream outputStream = new FileOutputStream(result.mediaUri.getPath())) {
+        try (OutputStream outputStream = new FileOutputStream(mediaUri.getPath())) {
           StreamUtil.copy(inputStream, outputStream);
-          MediaScannerConnection.scanFile(context, new String[] { result.mediaUri.getPath() }, new String[] { contentType }, null);
+          MediaScannerConnection.scanFile(context, new String[] { mediaUri.getPath() }, new String[] { contentType }, null);
         }
       } else {
-        try (OutputStream outputStream = context.getContentResolver().openOutputStream(result.mediaUri, "w")) {
+        try (OutputStream outputStream = context.getContentResolver().openOutputStream(mediaUri, "w")) {
           long total = StreamUtil.copy(inputStream, outputStream);
           if (total > 0) {
             updateValues.put(MediaStore.MediaColumns.SIZE, total);
@@ -144,7 +151,7 @@ public class SaveAttachmentTask extends ProgressDialogAsyncTask<SaveAttachmentTa
     }
 
     if (updateValues.size() > 0) {
-      getContext().getContentResolver().update(result.mediaUri, updateValues, null, null);
+      getContext().getContentResolver().update(mediaUri, updateValues, null, null);
     }
 
     return result.outputUri.getLastPathSegment();
@@ -387,8 +394,7 @@ public class SaveAttachmentTask extends ProgressDialogAsyncTask<SaveAttachmentTa
                        Toast.LENGTH_LONG).show();
         break;
       case SUCCESS:
-        String message = !TextUtils.isEmpty(result.second()) ? context.getResources().getString(R.string.SaveAttachmentTask_saved_to, result.second()) : context.getResources().getString(R.string.SaveAttachmentTask_saved);
-        Toast.makeText(context, message, Toast.LENGTH_LONG).show();
+        Toast.makeText(context, R.string.SaveAttachmentTask_saved, Toast.LENGTH_LONG).show();
         break;
       case WRITE_ACCESS_FAILURE:
         Toast.makeText(context, R.string.ConversationFragment_unable_to_write_to_sd_card_exclamation, Toast.LENGTH_LONG).show();
@@ -430,9 +436,9 @@ public class SaveAttachmentTask extends ProgressDialogAsyncTask<SaveAttachmentTa
   }
 
   public static void showWarningDialog(Context context, OnClickListener onAcceptListener, int count) {
-    AlertDialog.Builder builder = new AlertDialog.Builder(context);
+    AlertDialog.Builder builder = new MaterialAlertDialogBuilder(context);
     builder.setTitle(R.string.ConversationFragment_save_to_sd_card);
-    builder.setIcon(R.drawable.ic_warning);
+    builder.setIcon(R.drawable.symbol_error_triangle_fill_24);
     builder.setCancelable(true);
     builder.setMessage(context.getResources().getQuantityString(R.plurals.ConversationFragment_saving_n_media_to_storage_warning,
                                                                 count, count));

@@ -4,13 +4,17 @@ import android.Manifest
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
+import androidx.activity.addCallback
+import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import org.signal.core.util.ThreadUtil
+import org.signal.core.util.getParcelableCompat
+import org.signal.qr.kitkat.ScanListener
 import org.thoughtcrime.securesms.R
+import org.thoughtcrime.securesms.components.WrapperDialogFragment
 import org.thoughtcrime.securesms.crypto.IdentityKeyParcelable
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.permissions.Permissions
-import org.thoughtcrime.securesms.qr.ScanListener
 import org.thoughtcrime.securesms.recipients.Recipient
 import org.thoughtcrime.securesms.recipients.RecipientId
 import org.thoughtcrime.securesms.util.ServiceUtil
@@ -19,6 +23,14 @@ import org.thoughtcrime.securesms.util.ServiceUtil
  * Fragment to assist user in verifying recipient identity utilizing keys.
  */
 class VerifyIdentityFragment : Fragment(R.layout.fragment_container), ScanListener, VerifyDisplayFragment.Callback {
+
+  class Dialog : WrapperDialogFragment() {
+    override fun getWrappedFragment(): Fragment {
+      return VerifyIdentityFragment().apply {
+        arguments = this@Dialog.requireArguments()
+      }
+    }
+  }
 
   companion object {
     private const val EXTRA_RECIPIENT = "extra.recipient.id"
@@ -32,11 +44,25 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_container), ScanListen
       verified: Boolean
     ): VerifyIdentityFragment {
       return VerifyIdentityFragment().apply {
-        arguments = Bundle().apply {
-          putParcelable(EXTRA_RECIPIENT, recipientId)
-          putParcelable(EXTRA_IDENTITY, remoteIdentity)
-          putBoolean(EXTRA_VERIFIED, verified)
-        }
+        arguments = bundleOf(
+          EXTRA_RECIPIENT to recipientId,
+          EXTRA_IDENTITY to remoteIdentity,
+          EXTRA_VERIFIED to verified
+        )
+      }
+    }
+
+    fun createDialog(
+      recipientId: RecipientId,
+      remoteIdentity: IdentityKeyParcelable,
+      verified: Boolean
+    ): Dialog {
+      return Dialog().apply {
+        arguments = bundleOf(
+          EXTRA_RECIPIENT to recipientId,
+          EXTRA_IDENTITY to remoteIdentity,
+          EXTRA_VERIFIED to verified
+        )
       }
     }
   }
@@ -60,10 +86,10 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_container), ScanListen
   }
 
   private val recipientId: RecipientId
-    get() = requireArguments().getParcelable(EXTRA_RECIPIENT)!!
+    get() = requireArguments().getParcelableCompat(EXTRA_RECIPIENT, RecipientId::class.java)!!
 
   private val remoteIdentity: IdentityKeyParcelable
-    get() = requireArguments().getParcelable(EXTRA_IDENTITY)!!
+    get() = requireArguments().getParcelableCompat(EXTRA_IDENTITY, IdentityKeyParcelable::class.java)!!
 
   private val isVerified: Boolean
     get() = requireArguments().getBoolean(EXTRA_VERIFIED)
@@ -80,7 +106,8 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_container), ScanListen
     Permissions.with(this)
       .request(Manifest.permission.CAMERA)
       .ifNecessary()
-      .withPermanentDenialDialog(getString(R.string.VerifyIdentityActivity_signal_needs_the_camera_permission_in_order_to_scan_a_qr_code_but_it_has_been_permanently_denied))
+      .withRationaleDialog(getString(R.string.CameraXFragment_allow_access_camera), getString(R.string.CameraXFragment_to_scan_qr_code_allow_camera), R.drawable.ic_camera_24)
+      .withPermanentDenialDialog(getString(R.string.VerifyIdentityActivity_signal_needs_the_camera_permission_in_order_to_scan_a_qr_code_but_it_has_been_permanently_denied), null, R.string.CameraXFragment_allow_access_camera, R.string.CameraXFragment_to_scan_qr_codes, getParentFragmentManager())
       .onAllGranted {
         childFragmentManager.beginTransaction()
           .setCustomAnimations(R.anim.slide_from_top, R.anim.slide_to_bottom, R.anim.slide_from_bottom, R.anim.slide_to_top)
@@ -88,11 +115,22 @@ class VerifyIdentityFragment : Fragment(R.layout.fragment_container), ScanListen
           .addToBackStack(null)
           .commitAllowingStateLoss()
       }
-      .onAnyDenied { Toast.makeText(requireContext(), R.string.VerifyIdentityActivity_unable_to_scan_qr_code_without_camera_permission, Toast.LENGTH_LONG).show() }
+      .onAnyDenied { Toast.makeText(requireContext(), R.string.CameraXFragment_signal_needs_camera_access_scan_qr_code, Toast.LENGTH_LONG).show() }
       .execute()
   }
 
   override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
     Permissions.onRequestPermissionsResult(this, requestCode, permissions, grantResults)
+  }
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    val callback = requireActivity().onBackPressedDispatcher.addCallback(this) {
+      if (childFragmentManager.backStackEntryCount > 0) {
+        childFragmentManager.popBackStack()
+      } else {
+        requireActivity().finish()
+      }
+    }
   }
 }

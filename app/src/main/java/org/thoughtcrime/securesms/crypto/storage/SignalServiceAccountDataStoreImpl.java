@@ -4,22 +4,24 @@ import android.content.Context;
 
 import androidx.annotation.NonNull;
 
+import org.signal.libsignal.protocol.IdentityKey;
+import org.signal.libsignal.protocol.IdentityKeyPair;
+import org.signal.libsignal.protocol.InvalidKeyIdException;
+import org.signal.libsignal.protocol.NoSessionException;
+import org.signal.libsignal.protocol.SignalProtocolAddress;
+import org.signal.libsignal.protocol.groups.state.SenderKeyRecord;
+import org.signal.libsignal.protocol.state.KyberPreKeyRecord;
+import org.signal.libsignal.protocol.state.PreKeyRecord;
+import org.signal.libsignal.protocol.state.SessionRecord;
+import org.signal.libsignal.protocol.state.SignedPreKeyRecord;
 import org.thoughtcrime.securesms.util.TextSecurePreferences;
-import org.whispersystems.libsignal.IdentityKey;
-import org.whispersystems.libsignal.IdentityKeyPair;
-import org.whispersystems.libsignal.InvalidKeyIdException;
-import org.whispersystems.libsignal.NoSessionException;
-import org.whispersystems.libsignal.SignalProtocolAddress;
-import org.whispersystems.libsignal.groups.state.SenderKeyRecord;
-import org.whispersystems.libsignal.state.PreKeyRecord;
-import org.whispersystems.libsignal.state.SessionRecord;
-import org.whispersystems.libsignal.state.SignedPreKeyRecord;
 import org.whispersystems.signalservice.api.SignalServiceAccountDataStore;
 import org.whispersystems.signalservice.api.push.DistributionId;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -31,15 +33,18 @@ public class SignalServiceAccountDataStoreImpl implements SignalServiceAccountDa
   private final SignalIdentityKeyStore identityKeyStore;
   private final TextSecureSessionStore sessionStore;
   private final SignalSenderKeyStore   senderKeyStore;
+  private final SignalKyberPreKeyStore kyberPreKeyStore;
 
   public SignalServiceAccountDataStoreImpl(@NonNull Context context,
                                            @NonNull TextSecurePreKeyStore preKeyStore,
+                                           @NonNull SignalKyberPreKeyStore kyberPreKeyStore,
                                            @NonNull SignalIdentityKeyStore identityKeyStore,
                                            @NonNull TextSecureSessionStore sessionStore,
                                            @NonNull SignalSenderKeyStore senderKeyStore)
   {
     this.context           = context;
     this.preKeyStore       = preKeyStore;
+    this.kyberPreKeyStore  = kyberPreKeyStore;
     this.signedPreKeyStore = preKeyStore;
     this.identityKeyStore  = identityKeyStore;
     this.sessionStore      = sessionStore;
@@ -97,6 +102,16 @@ public class SignalServiceAccountDataStoreImpl implements SignalServiceAccountDa
   }
 
   @Override
+  public void markAllOneTimeEcPreKeysStaleIfNecessary(long staleTime) {
+    preKeyStore.markAllOneTimeEcPreKeysStaleIfNecessary(staleTime);
+  }
+
+  @Override
+  public void deleteAllStaleOneTimeEcPreKeys(long threshold, int minCount) {
+    preKeyStore.deleteAllStaleOneTimeEcPreKeys(threshold, minCount);
+  }
+
+  @Override
   public SessionRecord loadSession(SignalProtocolAddress axolotlAddress) {
     return sessionStore.loadSession(axolotlAddress);
   }
@@ -112,7 +127,7 @@ public class SignalServiceAccountDataStoreImpl implements SignalServiceAccountDa
   }
 
   @Override
-  public Set<SignalProtocolAddress> getAllAddressesWithActiveSessions(List<String> addressNames) {
+  public Map<SignalProtocolAddress, SessionRecord> getAllAddressesWithActiveSessions(List<String> addressNames) {
     return sessionStore.getAllAddressesWithActiveSessions(addressNames);
   }
 
@@ -168,6 +183,56 @@ public class SignalServiceAccountDataStoreImpl implements SignalServiceAccountDa
   }
 
   @Override
+  public KyberPreKeyRecord loadKyberPreKey(int kyberPreKeyId) throws InvalidKeyIdException {
+    return kyberPreKeyStore.loadKyberPreKey(kyberPreKeyId);
+  }
+
+  @Override
+  public List<KyberPreKeyRecord> loadKyberPreKeys() {
+    return kyberPreKeyStore.loadKyberPreKeys();
+  }
+
+  @Override
+  public @NonNull List<KyberPreKeyRecord> loadLastResortKyberPreKeys() {
+    return kyberPreKeyStore.loadLastResortKyberPreKeys();
+  }
+
+  @Override
+  public void storeKyberPreKey(int kyberPreKeyId, KyberPreKeyRecord record) {
+    kyberPreKeyStore.storeKyberPreKey(kyberPreKeyId, record);
+  }
+
+  @Override
+  public void storeLastResortKyberPreKey(int kyberPreKeyId, @NonNull KyberPreKeyRecord kyberPreKeyRecord) {
+    kyberPreKeyStore.storeLastResortKyberPreKey(kyberPreKeyId, kyberPreKeyRecord);
+  }
+
+  @Override
+  public boolean containsKyberPreKey(int kyberPreKeyId) {
+    return kyberPreKeyStore.containsKyberPreKey(kyberPreKeyId);
+  }
+
+  @Override
+  public void markKyberPreKeyUsed(int kyberPreKeyId) {
+    kyberPreKeyStore.markKyberPreKeyUsed(kyberPreKeyId);
+  }
+
+  @Override
+  public void removeKyberPreKey(int kyberPreKeyId) {
+    kyberPreKeyStore.removeKyberPreKey(kyberPreKeyId);
+  }
+
+  @Override
+  public void markAllOneTimeKyberPreKeysStaleIfNecessary(long staleTime) {
+    kyberPreKeyStore.markAllOneTimeKyberPreKeysStaleIfNecessary(staleTime);
+  }
+
+  @Override
+  public void deleteAllStaleOneTimeKyberPreKeys(long threshold, int minCount) {
+    kyberPreKeyStore.deleteAllStaleOneTimeKyberPreKeys(threshold, minCount);
+  }
+
+  @Override
   public void storeSenderKey(SignalProtocolAddress sender, UUID distributionId, SenderKeyRecord record) {
     senderKeyStore.storeSenderKey(sender, distributionId, record);
   }
@@ -207,5 +272,4 @@ public class SignalServiceAccountDataStoreImpl implements SignalServiceAccountDa
   public @NonNull SignalSenderKeyStore senderKeys() {
     return senderKeyStore;
   }
-
 }

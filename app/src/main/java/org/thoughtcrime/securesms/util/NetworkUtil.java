@@ -2,7 +2,10 @@ package org.thoughtcrime.securesms.util;
 
 import android.content.Context;
 import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkCapabilities;
 import android.net.NetworkInfo;
+import android.os.Build;
 import android.telephony.TelephonyManager;
 
 import androidx.annotation.NonNull;
@@ -30,12 +33,21 @@ public final class NetworkUtil {
     return info != null && info.isConnected() && info.isRoaming() && info.getType() == ConnectivityManager.TYPE_MOBILE;
   }
 
-  public static @NonNull CallManager.BandwidthMode getCallingBandwidthMode(@NonNull Context context) {
-    return getCallingBandwidthMode(context, PeerConnection.AdapterType.UNKNOWN);
+  public static boolean isConnected(@NonNull Context context) {
+    final NetworkInfo info = getNetworkInfo(context);
+    return info != null && info.isConnected();
   }
 
-  public static @NonNull CallManager.BandwidthMode getCallingBandwidthMode(@NonNull Context context, @NonNull PeerConnection.AdapterType networkAdapter) {
-    return useLowBandwidthCalling(context, networkAdapter) ? CallManager.BandwidthMode.LOW : CallManager.BandwidthMode.NORMAL;
+  public static @NonNull CallManager.DataMode getCallingDataMode(@NonNull Context context) {
+    return getCallingDataMode(context, PeerConnection.AdapterType.UNKNOWN);
+  }
+
+  public static @NonNull CallManager.DataMode getCallingDataMode(@NonNull Context context, @NonNull PeerConnection.AdapterType networkAdapter) {
+    if (SignalStore.internalValues().callingDataMode() != CallManager.DataMode.NORMAL) {
+      return SignalStore.internalValues().callingDataMode();
+    }
+
+    return useLowDataCalling(context, networkAdapter) ? CallManager.DataMode.LOW : CallManager.DataMode.NORMAL;
   }
 
   public static String getNetworkTypeDescriptor(@NonNull Context context) {
@@ -74,8 +86,24 @@ public final class NetworkUtil {
     }
   }
 
-  private static boolean useLowBandwidthCalling(@NonNull Context context, @NonNull PeerConnection.AdapterType networkAdapter) {
-    switch (SignalStore.settings().getCallBandwidthMode()) {
+  public static @NonNull NetworkStatus getNetworkStatus(@NonNull Context context) {
+    ConnectivityManager connectivityManager = ServiceUtil.getConnectivityManager(context);
+
+    if (Build.VERSION.SDK_INT >= 23) {
+      Network             network      = connectivityManager.getActiveNetwork();
+      NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+
+      boolean onVpn        = capabilities != null && capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN);
+      boolean isNotMetered = capabilities == null || capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_METERED);
+
+      return new NetworkStatus(onVpn, !isNotMetered);
+    } else {
+      return new NetworkStatus(false, false);
+    }
+  }
+
+  private static boolean useLowDataCalling(@NonNull Context context, @NonNull PeerConnection.AdapterType networkAdapter) {
+    switch (SignalStore.settings().getCallDataMode()) {
       case HIGH_ON_WIFI:
         switch (networkAdapter) {
           case UNKNOWN:

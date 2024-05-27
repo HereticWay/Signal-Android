@@ -12,7 +12,7 @@ import org.thoughtcrime.securesms.crypto.ReentrantSessionLock;
 import org.thoughtcrime.securesms.crypto.storage.SignalIdentityKeyStore;
 import org.thoughtcrime.securesms.database.model.IdentityRecord;
 import org.thoughtcrime.securesms.dependencies.ApplicationDependencies;
-import org.thoughtcrime.securesms.util.concurrent.SimpleTask;
+import org.signal.core.util.concurrent.SimpleTask;
 import org.whispersystems.signalservice.api.SignalSessionLock;
 
 import java.util.List;
@@ -32,7 +32,7 @@ public class UntrustedSendDialog extends AlertDialog.Builder implements DialogIn
     this.resendListener   = resendListener;
 
     setTitle(R.string.UntrustedSendDialog_send_message);
-    setIcon(R.drawable.ic_warning);
+    setIcon(R.drawable.symbol_error_triangle_fill_24);
     setMessage(message);
     setPositiveButton(R.string.UntrustedSendDialog_send, this);
     setNegativeButton(android.R.string.cancel, null);

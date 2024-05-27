@@ -7,10 +7,10 @@ import org.junit.Before;
 import org.junit.Test;
 import org.signal.core.util.logging.Log;
 import org.thoughtcrime.securesms.testutil.LogRecorder;
-import org.whispersystems.libsignal.util.guava.Optional;
-import org.whispersystems.signalservice.api.push.ACI;
+import org.whispersystems.signalservice.api.push.ServiceId.ACI;
 import org.whispersystems.signalservice.api.push.ServiceId;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.Assert.assertEquals;
@@ -41,7 +41,7 @@ public final class RecipientIdCacheTest {
 
   @Test
   public void empty_access_by_uuid() {
-    RecipientId recipientId = recipientIdCache.get(ServiceId.from(UUID.randomUUID()), null);
+    RecipientId recipientId = recipientIdCache.get(ACI.from(UUID.randomUUID()), null);
 
     assertNull(recipientId);
   }
@@ -56,7 +56,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_hit_by_uuid() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
 
@@ -68,8 +68,8 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_miss_by_uuid() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
-    ServiceId   sid2         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
+    ServiceId   sid2         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
 
@@ -81,7 +81,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_hit_by_uuid_e164_not_supplied_on_get() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, "+15551234567"));
 
@@ -93,7 +93,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_miss_by_uuid_e164_not_supplied_on_put() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
 
@@ -130,7 +130,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_hit_by_e164_uuid_not_supplied_on_get() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, "+15551234567"));
 
@@ -142,7 +142,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_miss_by_e164_uuid_not_supplied_on_put() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
     String      e164         = "+1555123456";
 
     recipientIdCache.put(recipient(recipientId1, null, e164));
@@ -155,7 +155,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void cache_hit_by_both() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
     String      e164         = "+1555123456";
 
     recipientIdCache.put(recipient(recipientId1, sid1, e164));
@@ -168,7 +168,7 @@ public final class RecipientIdCacheTest {
   @Test
   public void full_recipient_id_learned_by_two_puts() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
     String      e164         = "+1555123456";
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
@@ -183,7 +183,7 @@ public final class RecipientIdCacheTest {
   public void if_cache_state_disagrees_returns_null() {
     RecipientId recipientId1 = recipientId();
     RecipientId recipientId2 = recipientId();
-    ServiceId   sid          = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid          = ACI.from(UUID.randomUUID());
     String      e164         = "+1555123456";
 
     recipientIdCache.put(recipient(recipientId1, null, e164));
@@ -201,7 +201,7 @@ public final class RecipientIdCacheTest {
   public void after_invalid_cache_hit_entries_are_cleared_up() {
     RecipientId recipientId1 = recipientId();
     RecipientId recipientId2 = recipientId();
-    ServiceId   sid          = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid          = ACI.from(UUID.randomUUID());
     String      e164         = "+1555123456";
 
     recipientIdCache.put(recipient(recipientId1, null, e164));
@@ -217,8 +217,8 @@ public final class RecipientIdCacheTest {
   public void multiple_entries() {
     RecipientId recipientId1 = recipientId();
     RecipientId recipientId2 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
-    ServiceId   sid2         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
+    ServiceId   sid2         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
     recipientIdCache.put(recipient(recipientId2, sid2, null));
@@ -230,12 +230,12 @@ public final class RecipientIdCacheTest {
   @Test
   public void drops_oldest_when_reaches_cache_limit() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
 
     for (int i = 0; i < TEST_CACHE_LIMIT; i++) {
-      recipientIdCache.put(recipient(recipientId(), ServiceId.from(UUID.randomUUID()), null));
+      recipientIdCache.put(recipient(recipientId(), ACI.from(UUID.randomUUID()), null));
     }
 
     assertNull(recipientIdCache.get(sid1, null));
@@ -244,17 +244,17 @@ public final class RecipientIdCacheTest {
   @Test
   public void remains_in_cache_when_used_before_reaching_cache_limit() {
     RecipientId recipientId1 = recipientId();
-    ServiceId   sid1         = ServiceId.from(UUID.randomUUID());
+    ServiceId   sid1         = ACI.from(UUID.randomUUID());
 
     recipientIdCache.put(recipient(recipientId1, sid1, null));
 
     for (int i = 0; i < TEST_CACHE_LIMIT - 1; i++) {
-      recipientIdCache.put(recipient(recipientId(), ServiceId.from(UUID.randomUUID()), null));
+      recipientIdCache.put(recipient(recipientId(), ACI.from(UUID.randomUUID()), null));
     }
 
     assertEquals(recipientId1, recipientIdCache.get(sid1, null));
 
-    recipientIdCache.put(recipient(recipientId(), ServiceId.from(UUID.randomUUID()), null));
+    recipientIdCache.put(recipient(recipientId(), ACI.from(UUID.randomUUID()), null));
 
     assertEquals(recipientId1, recipientIdCache.get(sid1, null));
   }
@@ -267,8 +267,8 @@ public final class RecipientIdCacheTest {
     Recipient mock = mock(Recipient.class);
 
     when(mock.getId()).thenReturn(recipientId);
-    when(mock.getServiceId()).thenReturn(Optional.fromNullable(serviceId));
-    when(mock.getE164()).thenReturn(Optional.fromNullable(e164));
+    when(mock.getServiceId()).thenReturn(Optional.ofNullable(serviceId));
+    when(mock.getE164()).thenReturn(Optional.ofNullable(e164));
 
     return mock;
   }

@@ -7,6 +7,7 @@ import android.os.SystemClock
 import androidx.annotation.MainThread
 import org.signal.core.util.ThreadUtil
 import org.signal.core.util.concurrent.SignalExecutors
+import org.signal.core.util.concurrent.SimpleTask
 import org.signal.core.util.logging.Log
 import org.thoughtcrime.securesms.components.emoji.parsing.EmojiDrawInfo
 import org.thoughtcrime.securesms.emoji.protos.JumbomojiPack
@@ -14,7 +15,6 @@ import org.thoughtcrime.securesms.jobmanager.impl.AutoDownloadEmojiConstraint
 import org.thoughtcrime.securesms.keyvalue.SignalStore
 import org.thoughtcrime.securesms.util.ListenableFutureTask
 import org.thoughtcrime.securesms.util.SoftHashMap
-import org.thoughtcrime.securesms.util.concurrent.SimpleTask
 import java.io.IOException
 import java.util.UUID
 import java.util.concurrent.ExecutionException
@@ -27,7 +27,7 @@ private val TAG = Log.tag(JumboEmoji::class.java)
  */
 object JumboEmoji {
 
-  private val executor = ThreadUtil.trace(SignalExecutors.newCachedSingleThreadExecutor("jumbo-emoji"))
+  private val executor = SignalExecutors.newCachedSingleThreadExecutor("jumbo-emoji", ThreadUtil.PRIORITY_IMPORTANT_BACKGROUND_THREAD)
 
   const val MAX_JUMBOJI_COUNT = 5
 
@@ -116,13 +116,13 @@ object JumboEmoji {
         Log.i(TAG, "No file for emoji, downloading jumbo")
         EmojiDownloader.streamFileFromRemote(version, version.density, archiveName) { stream ->
           stream.use { remote ->
-            val jumbomojiPack = JumbomojiPack.parseFrom(remote)
+            val jumbomojiPack = JumbomojiPack.ADAPTER.decode(remote)
 
-            jumbomojiPack.itemsList.forEach { jumbo ->
+            jumbomojiPack.items.forEach { jumbo ->
               val emojiNameEntry = EmojiFiles.Name(jumbo.name, UUID.randomUUID())
               val outputStream = EmojiFiles.openForWriting(applicationContext, version, emojiNameEntry.uuid)
 
-              outputStream.use { jumbo.image.writeTo(it) }
+              outputStream.use { jumbo.image.write(it) }
 
               jumbos = EmojiFiles.JumboCollection.append(applicationContext, jumbos, emojiNameEntry)
             }
